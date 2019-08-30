@@ -1,0 +1,55 @@
+---
+# tasks file for roles/server_create_delete
+
+- block:
+  - name: Create Server
+    os_server:
+      auto_ip: false
+      availability_zone: "{{ availability_zone | default(omit) }}"
+      name: "{{ server_fqdn }}"
+      image: "{{ server_image }}"
+      flavor: "{{ server_flavor }}"
+      key_name: "{{ server_keypair_name }}"
+      network: "{{ server_net }}"
+      security_groups: "{{ security_group }}"
+    register: server
+  
+  - name: Attach FIP
+    os_floating_ip:
+      server: "{{ server_fqdn }}"
+  
+  - name: get server info
+    os_server_facts:
+      server: "{{ server_fqdn }}"
+  
+  - set_fact:
+      server_ip: "{{ openstack_servers[0]['public_v4'] }}"
+  
+  # Wait for the server to really start and become accessible
+  - name: Wait for SSH port to become active
+    wait_for:
+      port: 22
+      host: "{{ server_ip }}"
+      timeout: 600
+    tags: "az={{availability_zone}}"
+  
+  - name: Try connecting
+    retries: 10
+    delay: 1
+    command: "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' linux@{{server_ip}} -i ~/.ssh/{{server_keypair_name}}.pem"
+    tags: "az={{availability_zone}}"
+  
+  - name: Delete server
+    os_server:
+      state: absent
+      name: "{{ server_fqdn }}"
+      delete_fip: True
+
+  rescue:
+    - name: Delete server
+      os_server:
+        state: absent
+        name: "{{ server_fqdn }}"
+        delete_fip: True
+
+

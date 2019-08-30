@@ -1,0 +1,56 @@
+---
+
+- name: Scenario 16 - basic heat functionality
+  hosts: localhost
+  vars:
+    prefix: test-scenario16-
+    stack_name: "{{ (prefix + 'test_stack_apimon') }}"
+  tasks:
+    - name: Get The Public Network
+      os_networks_facts:
+        name:  admin_external_net
+
+    - name: Delete Stack
+      os_stack:
+        name: "{{ stack_name }}"
+        state: absent
+
+    - name: Delete orphaned KP
+      os_keypair:
+        name: "{{ ( prefix + 'test-keypair-apimon') }}"
+        state: absent
+
+    - block:
+      - name: Create Stack
+        os_stack:
+          state: present
+          template: "files/scenario16_stack_template.yaml"
+          name: "{{ stack_name }}"
+          parameters:
+            public_net_id: "{{ ansible_facts['openstack_networks'][0]['id'] }}"
+
+      - name: Query Stack
+        os_stack_facts:
+          name: "{{ stack_name }}"
+
+      - name: Update Stack
+        os_stack:
+          state: present
+          template: "files/scenario16_stack_template.yaml"
+          name: "{{ stack_name }}"
+          parameters:
+            image: Standard_Debian_9_latest
+            public_net_id: "{{ ansible_facts['openstack_networks'][0]['id'] }}"
+
+      - name: Delete Stack
+        os_stack:
+          name: "{{ stack_name }}"
+          state: absent
+
+      rescue:
+        - name: Delete stack
+          os_stack:
+            name: "{{ stack_name }}"
+            state: absent
+          ignore_errors: True
+    

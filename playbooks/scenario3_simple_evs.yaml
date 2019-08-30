@@ -1,0 +1,84 @@
+---
+
+- name: Scenario 3 - basic storage functionality
+  hosts: localhost
+  vars:
+    prefix: scenario3-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        volume_name: "{{ (prefix + '-test_volume_apimon') }}"
+        snapshot_name: "{{ (prefix + '-test_snapshot_apimon') }}"
+        backup_name: "{{ (prefix + '-test_backup_apimon') }}"
+
+        #     - name: pre-cleanup
+        #       script: cleanup_scenario3.py 'scenario3-'
+  
+    - name: List Volumes
+      script: list_volumes.py
+
+    - name: Rescue block
+      block:
+
+        - name: Create Volume
+          os_volume:
+            state: present
+            availability_zone: eu-de-01
+            size: 10
+            display_name: "{{volume_name}}"
+    
+        - name: List Snapshots
+          script: list_snapshots.py
+    
+        - name: Create snapshot
+          os_volume_snapshot:
+            state: present
+            display_name: "{{snapshot_name}}"
+            volume: "{{volume_name}}"
+    
+        - name: List Backups
+          script: list_backups.py
+    
+        - name: Create backup
+          script: "create_backup.py {{volume_name}} {{snapshot_name}} {{backup_name}}"
+    
+        - name: Restore backup
+          script: "restore_backup.py {{backup_name}} {{volume_name}} {{ (volume_name + 'new') }}"
+    
+        - name: Modify snapshot
+          script: "modify_snapshot.py {{snapshot_name}} {{ (snapshot_name + '_new') }}"
+  
+        - name: Delete backup
+          script: "delete_backup.py {{backup_name}}"
+  
+        - name: Delete snapshot
+          os_volume_snapshot:
+            state: absent
+            display_name: "{{ (snapshot_name + '_new') }}"
+            volume: "{{volume_name}}"
+  
+        - name: Delete Volume
+          os_volume:
+            state: absent
+            display_name: "{{volume_name}}"
+
+      rescue:
+        # If we failed - cleanup what we can
+        - name: Delete backup
+          script: "delete_backup.py {{backup_name}}"
+          ignore_errors: True
+
+        - name: Delete snapshot
+          os_volume_snapshot:
+            state: absent
+            display_name: "{{ (snapshot_name + '_new') }}"
+            volume: "{{volume_name}}"
+          ignore_errors: True
+
+        - name: Delete Volume
+          os_volume:
+            state: absent
+            display_name: "{{volume_name}}"
+          ignore_errors: True

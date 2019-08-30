@@ -1,0 +1,149 @@
+heat_template_version: 2013-05-23
+
+description: A HOT template that creates VM instance with an attached Cinder volume.
+
+parameters: 
+  public_net_id:
+    type: string
+    description: ID of OTC public network
+  security_group_name:
+    type: string
+    description: ID of security group
+    default: test-scenario16-test-security_group-apimon
+  private_net_name:
+    type: string
+    description: Name of private network to be created
+    default: test-scenario16-test-subnet-apimon
+  private_net_cidr:
+    type: string
+    description: Private network address (CIDR notation)
+    default: 172.16.11.0/24
+  private_net_gateway:
+    type: string
+    description: Private network gateway address
+    default: 172.16.11.1
+  private_net_pool_start:
+    type: string
+    description: Start of private network IP address allocation pool
+    default: 172.16.11.4
+  private_net_pool_end:
+    type: string
+    description: End of private network IP address allocation pool
+    default: 172.16.11.252
+  private_net_dns:
+    type: comma_delimited_list
+    description: DNS servers
+    default: [100.125.4.25, 8.8.8.8]
+  key_name: 
+    default: test-scenario16-test-keypair-apimon
+    type: string
+    description: Name of an existing key pair to use for the instance
+  flavor: 
+    default: s2.medium.1
+    type: string
+    description: Flavor for the instance to be created
+  image: 
+    default: Standard_CentOS_7_latest
+    type: string
+    description: Name or ID of the image to use for the instance.
+  instance_name: 
+    default: test-scenario16-test-instance-apimon
+    type: string
+    description: Name of the ECS instance to be created.
+  volume_size: 
+    default: 50
+    type: number
+    description: The size of the Cinder volume
+
+resources: 
+  private_net:
+    type: OS::Neutron::Net
+    properties:
+      name: { get_param: private_net_name }
+
+  private_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network_id: { get_resource: private_net }
+      cidr: { get_param: private_net_cidr }
+      gateway_ip: { get_param: private_net_gateway }
+      dns_nameservers: { get_param: private_net_dns }
+      allocation_pools:
+        - start: { get_param: private_net_pool_start }
+          end: { get_param: private_net_pool_end }
+
+  router:
+    type: OS::Neutron::Router
+    properties:
+      external_gateway_info:
+        network: { get_param: public_net_id }
+
+  router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: router }
+      subnet_id: { get_resource: private_subnet }
+
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: {get_param: security_group_name}
+      rules:
+        - protocol: icmp
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+        - protocol: tcp
+          port_range_min: 443
+          port_range_max: 443
+
+  attach_volume: 
+    type: OS::Cinder::VolumeAttachment
+    properties: 
+      instance_uuid: 
+        get_resource: server_instance
+      mountpoint: /dev/vdb
+      volume_id: 
+        get_resource: data_volume
+  data_volume: 
+    type: OS::Cinder::Volume
+    properties: 
+      size: 
+        get_param: volume_size
+  server_instance: 
+    type: OS::Nova::Server
+    depends_on: router_interface
+    properties: 
+      key_name: 
+        get_resource: keypair
+      name:  { get_param: instance_name }
+      image: 
+        get_param: image
+      user_data_format: RAW
+      flavor: 
+        get_param: flavor
+      networks: 
+        - port: {get_resource: private_port}
+  keypair: 
+    type: OS::Nova::KeyPair
+    properties: 
+      name:  { get_param: key_name }
+  private_port:
+    type: OS::Neutron::Port
+    properties:
+      fixed_ips:
+      - subnet_id: {get_resource: private_subnet}
+      network_id: {get_resource: private_net}
+      security_groups:
+      - {get_resource: security_group}
+
+outputs: 
+  instance_networks: 
+    description: The IP addresses of the deployed instance
+    value: 
+      get_attr: 
+        - server_instance
+        - networks

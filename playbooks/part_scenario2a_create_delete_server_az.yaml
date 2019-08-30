@@ -1,0 +1,9 @@
+---
+# A partial playbook to start and delete server in given az
+- name: Create/Delete VM
+  hosts: localhost
+  tasks:
+    - name: Create server in {{az}}
+      include_role:
+        name: opentelekomcloud.bastion
+ 

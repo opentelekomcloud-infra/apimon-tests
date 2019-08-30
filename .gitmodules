@@ -1,0 +1,3 @@
+[submodule "ansible-modules"]
+	path = ansible-modules
+	url = https://github.com/OpenTelekomCloud/ansible-modules.git

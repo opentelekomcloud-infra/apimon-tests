@@ -1,0 +1,166 @@
+---
+
+- name: Scenario 2 - basic compute functionality
+  hosts: localhost
+  vars:
+    prefix: scenario2-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        test_server_fqdn: "{{ (prefix + '.host') }}"
+        test_security_group_name: "{{ (prefix + '-sg') }}"
+        test_keypair_name: "{{ (prefix + '-kp') }}"
+
+    - debug:
+        msg: "Using prefix {{ prefix }}"
+
+    - name: List Keypairs
+      script: list_keypairs.py
+
+    - name: Ensure .ssh exists
+      file:
+        path: "~/.ssh"
+        state: directory
+
+    - name: Create Keypair
+      include_role:
+        name: opentelekomcloud.keypair
+      vars:
+        keypair_name: "{{ test_keypair_name }}"
+
+    - name: List Networks
+      os_networks_facts:
+
+    - name: List Subnets
+      os_subnets_facts:
+
+    - name: List Routers
+      script: list_routers.py
+
+    - block:
+
+      - name: Create VPC (Router + Net + Subnet)
+        include_role:
+          name: opentelekomcloud.vpc
+  
+      - name: List SecurityGroups with Rules
+        script: list_security_groups.py
+  
+      - name: Create SecurityGroup
+        os_security_group:
+          name: "{{ test_security_group_name }}"
+          description: Test Security group created by APImon
+  
+      - name: Create SecurityGroupRule
+        os_security_group_rule:
+          security_group: "{{ test_security_group_name }}"
+          protocol: tcp
+          port_range_min: 2208
+          port_range_max: 2209
+          remote_ip_prefix: 0.0.0.0/0
+  
+      - name: List Images
+        os_image_facts:
+  
+      - name: List Flavors
+        os_flavor_facts:
+  
+      - name: List Servers
+        os_server_facts:
+  
+      - name: Create Server with all required resources
+        include_role:
+          name: opentelekomcloud.bastion
+        vars:
+          server_keypair_name: "{{ test_keypair_name }}"
+          server_fqdn: "{{ test_server_fqdn }}"
+  
+      - name: Get Server metadata
+        script: "get_server_metadata.py {{ test_server_fqdn }}"
+  
+      - name: Modify metadata
+        os_server_metadata:
+          name: "{{ test_server_fqdn }}"
+          state: present
+          meta:
+            meta_k1: v1
+            meta_k2: v2
+  
+      - name: Delete metadata
+        os_server_metadata:
+          name: "{{ test_server_fqdn }}"
+          state: absent
+          meta:
+            meta_k1:
+            meta_k2:
+  
+      - name: Set Tags on the Server
+        os_tag:
+          server: "{{ test_server_fqdn }}"
+          state: present
+          tags:
+            - tag1
+            - tag2
+          mode: set
+  
+      - name: Delete Server with all required resources
+        include_role:
+          name: opentelekomcloud.bastion
+        vars:
+          state: absent
+          server_fqdn: "{{ test_server_fqdn }}"
+  
+      - name: Delete SecurityGroupRule
+        os_security_group_rule:
+          state: "absent"
+          security_group: "{{ test_security_group_name }}"
+          protocol: tcp
+          port_range_min: 2208
+          port_range_max: 2209
+          remote_ip_prefix: 0.0.0.0/0
+  
+      - name: Delete SecurityGroup
+        os_security_group:
+          state: "absent"
+          name: "{{ test_security_group_name }}"
+  
+      - name: Delete VPC
+        include_role:
+          name: opentelekomcloud.vpc
+        vars:
+          state: absent
+  
+      - name: Delete Keypair
+        include_role:
+          name: opentelekomcloud.keypair
+        vars:
+          keypair_name: "{{ test_keypair_name }}"
+          state: absent
+
+      rescue:
+        - name: Cleanup Server with all required resources
+          include_role:
+            name: opentelekomcloud.bastion
+          vars:
+            state: absent
+            server_fqdn: "{{ test_server_fqdn }}"
+    
+        - name: Delete SecurityGroup
+          os_security_group:
+            state: "absent"
+            name: "{{ test_security_group_name }}"
+    
+        - name: Delete VPC
+          include_role:
+            name: opentelekomcloud.vpc
+          vars:
+            state: absent
+    
+        - name: Delete Keypair
+          include_role:
+            name: opentelekomcloud.keypair
+          vars:
+            keypair_name: "{{ test_keypair_name }}"
+            state: absent

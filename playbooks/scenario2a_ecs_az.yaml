@@ -1,0 +1,109 @@
+---
+
+# Scenario to test ECS service in different AZs
+# A VPC is created and VM is being started in different AZs
+#
+- name: Scenario 2a - Compute per AZ
+  hosts: localhost
+  vars:
+    prefix: scenario2a-
+    test_image: Standard_Fedora_30_latest
+    test_flavor: s2.medium.2
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        test_server_fqdn: "{{ (prefix + '.host') }}"
+        test_security_group_name: "{{ (prefix + '-sg') }}"
+        test_keypair_name: "{{ (prefix + '-kp') }}"
+        test_network_name: "{{ ( prefix + '-net') }}"
+
+    - block:
+  
+      - name: Create Keypair
+        include_role:
+          name: opentelekomcloud.keypair
+        vars:
+          keypair_name: "{{ test_keypair_name }}"
+
+      - name: Create VPC
+        include_role:
+          name: opentelekomcloud.vpc
+        vars:
+          network_name: "{{ test_network_name }}"
+
+      - name: Create SG
+        os_security_group:
+          name: "{{ test_security_group_name }}"
+          description: "dummy"
+
+      - name: Create SG-Rule
+        os_security_group_rule:
+          security_group: "{{ test_security_group_name }}"
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+          remote_ip_prefix: 0.0.0.0/0
+
+      - name: Get network facts
+        os_networks_facts:
+          name: "{{ test_network_name }}"
+
+      - set_fact:
+          network_azs: "{{ openstack_networks[0]['availability_zones'] }}"
+
+      - name: "Create server in {{item}}"
+        include_role:
+          name: server_create_delete 
+        vars:
+          server_keypair_name: "{{ test_keypair_name }}"
+          server_fqdn: "{{ (item + '.' + test_server_fqdn) }}"
+          server_image: "{{ test_image }}"
+          server_flavor: "{{ test_flavor }}"
+          server_net: "{{ test_network_name }}"
+          security_group: "{{ test_security_group_name }}"
+          availability_zone: "{{ item }}"
+        loop: "{{ network_azs }}"
+   
+      - name: Delete SG
+        os_security_group:
+          name: "{{ test_security_group_name }}"
+          state: absent
+
+      - name: Delete VPC
+        include_role:
+          name: opentelekomcloud.vpc
+        vars:
+          state: absent
+          network_name: "{{ test_network_name }}"
+
+      - name: Delete KP
+        include_role:
+          name: opentelekomcloud.keypair
+        vars:
+          keypair_name: "{{ test_keypair_name }}"
+          state: absent
+          force_delete_keypair: true
+
+      rescue:
+        # do something here
+        - name: Delete SG
+          os_security_group:
+            name: "{{ test_security_group_name }}"
+            state: absent
+  
+        - name: Delete VPC
+          include_role:
+            name: opentelekomcloud.vpc
+          vars:
+            state: absent
+            network_name: "{{ test_network_name }}"
+  
+        - name: Delete KP
+          include_role:
+            name: opentelekomcloud.keypair
+          vars:
+            keypair_name: "{{ test_keypair_name }}"
+            state: absent
+            force_delete_keypair: true
