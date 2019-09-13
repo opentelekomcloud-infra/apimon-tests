@@ -16,6 +16,4 @@ backup_id = backup.id
 volume_id = backup.volume_id
 
 backup = conn.block_storage.restore_backup(backup_id, volume_id, name=sys.argv[2])
-conn.block_storage.wait_for_status(backup,status='available')
-
-
+conn.block_storage.wait_for_status(backup,status='available', wait=600)
