@@ -1,7 +1,6 @@
 ---
 
-# Scenario to test EVS service in different AZs
-# A VPC is created and EVS is being deployed in different AZs
+# Scenario to test EVS deployment in different AZs
 #
 - name: Scenario 3a - Storage per AZ
   hosts: localhost
@@ -13,19 +12,12 @@
 
     - set_fact:
         test_volume_name: "{{ (prefix + '-test_volume_apimon') }}"
-        test_network_name: "{{ ( prefix + '-net') }}"
 
     - block:
   
-      - name: Create VPC
-        include_role:
-          name: opentelekomcloud.vpc
-        vars:
-          network_name: "{{ test_network_name }}"
-
       - name: Get network facts
         os_networks_facts:
-          name: "{{ test_network_name }}"
+          name: admin_external_net
 
       - set_fact:
           network_azs: "{{ openstack_networks[0]['availability_zones'] }}"
@@ -39,19 +31,3 @@
           size: 10
           display_name: "{{volume_name}}"
         loop: "{{ network_azs }}"
-
-      - name: Delete VPC
-        include_role:
-          name: opentelekomcloud.vpc
-        vars:
-          state: absent
-          network_name: "{{ test_network_name }}"
-
-      rescue:
-        # do something here
-        - name: Delete VPC
-          include_role:
-            name: opentelekomcloud.vpc
-          vars:
-            state: absent
-            network_name: "{{ test_network_name }}"
