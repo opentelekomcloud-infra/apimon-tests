@@ -1,0 +1,24 @@
+---
+# tasks file for roles/volume_create_delete
+
+- block:
+  - name: Create Volume
+    os_volume:
+      state: present
+      availability_zone: "{{ availability_zone | default(omit) }}"
+      size: 10
+      display_name: "{{volume_name}}"
+    register: volume
+  
+  - name: Delete Volume
+    os_volume:
+      state: absent
+      display_name: "{{volume_name}}"
+
+  rescue:
+    - name: Delete Volume
+      os_volume:
+        state: absent
+        display_name: "{{volume_name}}"
+
+
