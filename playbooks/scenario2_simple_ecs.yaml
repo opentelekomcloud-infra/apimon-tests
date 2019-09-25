@@ -105,13 +105,6 @@
             - tag2
           mode: set
   
-      - name: Delete Server with all required resources
-        include_role:
-          name: opentelekomcloud.bastion
-        vars:
-          state: absent
-          server_fqdn: "{{ test_server_fqdn }}"
-  
       - name: Delete SecurityGroupRule
         os_security_group_rule:
           state: "absent"
@@ -121,25 +114,7 @@
           port_range_max: 2209
           remote_ip_prefix: 0.0.0.0/0
   
-      - name: Delete SecurityGroup
-        os_security_group:
-          state: "absent"
-          name: "{{ test_security_group_name }}"
-  
-      - name: Delete VPC
-        include_role:
-          name: opentelekomcloud.vpc
-        vars:
-          state: absent
-  
-      - name: Delete Keypair
-        include_role:
-          name: opentelekomcloud.keypair
-        vars:
-          keypair_name: "{{ test_keypair_name }}"
-          state: absent
-
-      rescue:
+      always:
         - name: Cleanup Server with all required resources
           include_role:
             name: opentelekomcloud.bastion
