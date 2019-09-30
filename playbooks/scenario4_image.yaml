@@ -13,7 +13,7 @@
     - block:
 
       - name: Check service endpoint
-        file: check_image_ep.py
+        scenario: check_image_ep.py
 
       - name: List Images
         os_image_facts:
@@ -21,4 +21,3 @@
       - name: Get single Image
         os_image_facts:
           image: Standard_Fedora_30_latest
-
