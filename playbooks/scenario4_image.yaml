@@ -1,0 +1,24 @@
+---
+
+# Scenario to test bascic Image functions
+#
+- name: Scenario 4 - Image
+  hosts: localhost
+  vars:
+    prefix: scenario4-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - block:
+
+      - name: Check service endpoint
+        file: check_image_ep.py
+
+      - name: List Images
+        os_image_facts:
+
+      - name: Get single Image
+        os_image_facts:
+          image: Standard_Fedora_30_latest
+
