@@ -5,6 +5,9 @@
   vars:
     prefix: scenario2-
   tasks:
+    - name: Check compute endpoint
+      script: check_compute_ep.py
+
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
 

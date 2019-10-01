@@ -6,6 +6,9 @@
     prefix: test-scenario16-
     stack_name: "{{ (prefix + 'test_stack_apimon') }}"
   tasks:
+    - name: Check orchestration endpoint
+      script: check_orchestration_ep.py
+
     - name: Get The Public Network
       os_networks_facts:
         name:  admin_external_net

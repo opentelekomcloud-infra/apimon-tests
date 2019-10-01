@@ -12,7 +12,7 @@
 
     - block:
 
-      - name: Check service endpoint
+      - name: Check image endpoint
         script: check_image_ep.py
 
       - name: List Images

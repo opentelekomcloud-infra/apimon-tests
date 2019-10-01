@@ -4,5 +4,8 @@
   hosts: localhost
   ignore_errors: yes
   tasks:
+    - name: Check identity endpoint
+      script: check_identity_ep.py
+
     - name: Get token
       script: get_token.py
