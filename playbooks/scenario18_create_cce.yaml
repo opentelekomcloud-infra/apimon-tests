@@ -70,6 +70,9 @@
           script: "create_cce_cluster.py {{ cce_name }} {{ net_router['id'] }} {{ net_network['id'] }}"
           when: net_router is defined and net_network is defined
 
+        - name: Find CCE cluster
+          script: "find_cce_cluster.py {{ cce_name }}"
+          when: net_router is defined and net_network is defined
 
 #      always:    
 #        - name: Delete VPC

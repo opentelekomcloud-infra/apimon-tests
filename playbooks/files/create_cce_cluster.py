@@ -12,8 +12,7 @@ conn = openstack.connect()
 # Register OTC Extensions
 sdk.register_otc_extensions(conn)
 
-
-
+cluster = conn.cce.find_cluster(sys.argv[1])
 dict = {
     'metadata': {
         'name': sys.argv[1]
@@ -32,5 +31,7 @@ dict = {
         }
     }
 }
-cluster = conn.cce.create_cluster(**dict)
-#conn.cce.wait_for_cluster(cluster)
+
+if (cluster is None):
+  cluster = conn.cce.create_cluster(**dict)
+  #conn.cce.wait_for_cluster(cluster)

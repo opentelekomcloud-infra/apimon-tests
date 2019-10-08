@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import openstack
+import sys
+
 from otcextensions import sdk
 
 #openstack.enable_logging(True, http_debug=True)
@@ -11,10 +13,5 @@ conn = openstack.connect()
 # Register OTC Extensions
 sdk.register_otc_extensions(conn)
 
-clusters = conn.cce.clusters()
-for cluster in clusters:
-   print(cluster)
-#cluster = conn.cce.find_cluster('cee67c33-c024-11e9-8b88-0255ac101618')
-#print(cluster.status["status"])
-#cluster_status = conn.cce.wait_for_cluster(cluster)
-#print(cluster_status)
+cluster = conn.cce.find_cluster(sys.argv[1])
+print(cluster)
