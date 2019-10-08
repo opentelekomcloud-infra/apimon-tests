@@ -1,0 +1,89 @@
+---
+- name: Scenario 18 - CCE Lifecycle
+  hosts: localhost
+  vars:
+    prefix: scenario18-
+  tasks:
+
+    - name: Set facts
+      set_fact:
+        test_keypair_name: "{{ (prefix + 'keypair') }}"
+        vpc_name: "{{ ( prefix + 'router' ) }}"
+        nw_name: "{{ ( prefix + 'network' ) }}"
+        sn_name: "{{ ( prefix + 'subnet' ) }}"
+        cce_name: "{{ ( prefix + 'cluster' ) }}"
+
+    - debug:
+        msg: "Using prefix {{ prefix }}"
+
+    - name: List Keypairs
+      script: list_keypairs.py
+
+    - name: Ensure .ssh exists
+      file:
+        path: "~/.ssh"
+        state: directory
+
+    - name: Create Keypair
+      include_role:
+        name: opentelekomcloud.keypair
+      vars:
+        keypair_name: "{{ test_keypair_name }}"
+
+    - block:    
+        - name: Create VPC (Router + Net + Subnet)
+          include_role:
+            name: opentelekomcloud.vpc
+          vars:
+            router_name: "{{ vpc_name }}"
+            network_name: "{{ nw_name }}"
+            subnet_name: "{{ sn_name }}"
+
+        - name: List all Routers
+          script: list_routers.py
+
+        - name: Debug Router-ID
+          debug:
+            var: net_router['id']
+          when: net_router is defined
+
+        - name: List all Networks
+          os_networks_facts:
+
+        - name: Debug Network-ID
+          debug:
+            var: net_network['id']
+          when: net_network is defined
+
+        - name: List all Subnets
+          os_subnets_facts:
+        
+        - name: Debug Subnet-ID
+          debug:
+            var: net_subnet['id']
+          when: net_subnet is defined
+
+        - name: List all CCE clusters
+          script: list_cce_clusters.py
+
+        - name: Create CCE cluster
+          script: "create_cce_cluster.py {{ cce_name }} {{ net_router['id'] }} {{ net_network['id'] }}"
+          when: net_router is defined and net_network is defined
+
+
+#      always:    
+#        - name: Delete VPC
+#          include_role:
+#            name: opentelekomcloud.vpc
+#          vars:
+#            router_name: "{{ vpc_name }}"
+#            network_name: "{{ nw_name }}"
+#            subnet_name: "{{ sn_name }}"
+#            state: absent
+#    
+#        - name: Delete Keypair
+#          include_role:
+#            name: opentelekomcloud.keypair
+#          vars:
+#            keypair_name: "{{ test_keypair_name }}"
+#            state: absent
