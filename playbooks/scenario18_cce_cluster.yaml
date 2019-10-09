@@ -1,0 +1,111 @@
+---
+
+- name: Scenario 18 - CCE cluster management
+  hosts: localhost
+  vars:
+    prefix: scenario18
+  tasks:
+    - set_fact:
+        #prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        test_cluster_name: "{{ (prefix + '-test-cce-apimon') }}"
+        test_cluster_node_name: "{{ (prefix + '-test-ccenode-apimon') }}"
+        test_router_name: "{{ (prefix + '-test_router_apimon') }}"
+        test_subnet_name: "{{ (prefix + '-test_subnet_apimon') }}"
+        test_network_name: "{{ (prefix + '-test_network_apimon') }}"
+        test_sshkey: "{{ (prefix + '-test_sshkey_apimon') }}"
+
+    - name: Main scenario block
+      block:
+
+        - name: Create VPC (Router + Net + Subnet)
+          include_role:
+            name: opentelekomcloud.vpc
+          vars:
+            router_name: "{{ test_router_name }}"
+            network_name: "{{ test_network_name }}"
+            subnet_name: "{{ test_subnet_name }}"
+            enable_snat: False
+            state: present
+        
+        - name: Create SSH keypair 
+          include_role:
+            name: opentelekomcloud.keypair
+          vars:
+            keypair_name: "{{ test_sshkey }}"
+        
+        - name: Check CCE endpoint
+          script: "check_cce_ep.py"
+
+        - name: Create CCE cluster
+          script: "create_cce_cluster.py  {{ test_cluster_name }}  {{ test_router_name }}  {{ test_network_name }}"
+    
+        - name: List CCE clusters
+          script: "list_cce_clusters.py" 
+        
+        - name: Query CCE cluster
+          script: "query_cce_cluster.py  {{ test_cluster_name }}"
+
+        - name: Get CCE cluster certificates
+          script: "get_cce_cluster_certificates.py {{ test_cluster_name }}"
+        
+        - name: Create CCE cluster node
+          script:  "create_cce_cluster_node.py {{ test_cluster_name }}  {{ test_cluster_node_name }}  {{ test_sshkey }}"
+    
+        - name: List CCE cluster nodes
+          script: "list_cce_cluster_nodes.py  {{ test_cluster_name }}"
+        
+        - name: Query CCE cluster node
+          script: "query_cce_cluster_node.py  {{ test_cluster_name }}  {{ test_cluster_node_name }}"
+        
+        - name: Delete CCE cluster node
+          script:  "delete_cce_cluster_node.py {{ test_cluster_name }}  {{ test_cluster_node_name }}"
+  
+        - name: Delete CCE cluster
+          script: "delete_cce_cluster.py  {{ test_cluster_name }}"
+
+        - name: Delete VPC (Router + Net + Subnet)
+          include_role:
+            name: opentelekomcloud.vpc
+          vars:
+            router_name: "{{ test_router_name }}"
+            network_name: "{{ test_network_name }}"
+            subnet_name: "{{ test_subnet_name }}"
+            state: absent
+
+        - name: Delete SSH kepair
+          include_role:
+            name: opentelekomcloud.keypair
+          vars:
+            keypair_name: "{{ test_sshkey }}"
+            state: absent
+
+      rescue:
+        # If we failed - cleanup what we can
+        
+        - name: Delete CCE cluster node
+          script:  "delete_cce_cluster_node.py {{ test_cluster_name }}  {{ test_cluster_node_name }}"
+          ignore_errors: True
+
+        - name: Delete CCE cluster
+          script: "delete_cce_cluster.py  {{ test_cluster_name }}"
+          ignore_errors: True
+        
+        - name: Delete VPC (Router + Net + Subnet)
+          include_role:
+            name: opentelekomcloud.vpc
+          vars:
+            router_name: "{{ test_router_name }}"
+            network_name: "{{ test_network_name }}"
+            subnet_name: "{{ test_subnet_name }}"
+            state: absent
+          ignore_errors: True
+        
+        - name: Delete SSH kepair
+          include_role:
+            name: opentelekomcloud.keypair
+          vars:
+            keypair_name: "{{ test_sshkey }}"
+            state: absent
+          ignore_errors: True
