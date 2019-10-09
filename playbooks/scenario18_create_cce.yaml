@@ -12,6 +12,7 @@
         nw_name: "{{ ( prefix + 'network' ) }}"
         sn_name: "{{ ( prefix + 'subnet' ) }}"
         cce_name: "{{ ( prefix + 'cluster' ) }}"
+        cce_node: "{{ ( prefix + 'node' ) }}"
 
     - debug:
         msg: "Using prefix {{ prefix }}"
@@ -74,7 +75,25 @@
           script: "find_cce_cluster.py {{ cce_name }}"
           when: net_router is defined and net_network is defined
 
-#      always:    
+#        - name: Add CCE node
+#          script: "create_cce_cluster_node.py {{ cce_name }} {{ cce_node }} {{ test_keypair_name }}"
+#          when: net_router is defined and net_network is defined
+
+#        - name: Find CCE node
+#          script: "find_cce_cluster_node.py {{ cce_name }} {{ cce_node }}"
+#          when: net_router is defined and net_network is defined
+
+        - name: Get CCE credentials
+          script: "get_cce_cluster_certificates.py {{ cce_name }}"
+          when: net_router is defined and net_network is defined
+
+#      always:
+#        - name: Delete CCE node
+#          script: "delete_cce_cluster_node.py {{ cce_name }} {{ cce_node }}"
+
+#        - name: Delete CCE cluster
+#          script: "delete_cce_cluster.py {{ cce_name }}"
+
 #        - name: Delete VPC
 #          include_role:
 #            name: opentelekomcloud.vpc
@@ -83,7 +102,7 @@
 #            network_name: "{{ nw_name }}"
 #            subnet_name: "{{ sn_name }}"
 #            state: absent
-#    
+    
 #        - name: Delete Keypair
 #          include_role:
 #            name: opentelekomcloud.keypair

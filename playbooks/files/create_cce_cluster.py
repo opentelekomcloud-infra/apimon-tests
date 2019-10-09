@@ -19,7 +19,7 @@ dict = {
     },
     'spec': {
         'type': 'VirtualMachine',
-        'version': 'v1.11.3-r1',
+        'version': 'v1.11.7-r2',
         'hostNetwork': {
             'vpc': sys.argv[2],
             'subnet': sys.argv[3]
@@ -34,4 +34,4 @@ dict = {
 
 if (cluster is None):
   cluster = conn.cce.create_cluster(**dict)
-  #conn.cce.wait_for_cluster(cluster)
+  conn.cce.wait_for_cluster(cluster)
