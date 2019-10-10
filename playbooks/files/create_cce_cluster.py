@@ -37,4 +37,5 @@ dict = {
 if (cluster is None):
   cluster = conn.cce.create_cluster(**dict)
   #time.sleep(720)
-  conn.cce.wait_for_cluster(cluster)
+  conn.cce.wait_for_cluster(cluster, status='Available', failures=None,
+                         interval=10, wait=960)

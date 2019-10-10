@@ -14,4 +14,4 @@ sdk.register_otc_extensions(conn)
 
 
 cluster = conn.cce.find_cluster(sys.argv[1])
-conn.cce.wait_for_cluster(cluster)
+conn.cce.wait_for_cluster(cluster, status='Available', failures=None, interval=10, wait=960)
