@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-import openstack
+import time
 import sys
+
+import openstack
 from otcextensions import sdk
 
 openstack.enable_logging(True, http_debug=True)
@@ -40,3 +42,4 @@ dict = {
 
 if cluster and (node is None):
   node = conn.cce.create_cluster_node(cluster, **dict)
+  time.sleep(300)

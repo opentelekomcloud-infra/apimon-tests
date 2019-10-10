@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-import openstack
 import sys
+import time
+
+import openstack
 from otcextensions import sdk
 
 openstack.enable_logging(True, http_debug=True)
@@ -34,4 +36,5 @@ dict = {
 
 if (cluster is None):
   cluster = conn.cce.create_cluster(**dict)
+  #time.sleep(720)
   conn.cce.wait_for_cluster(cluster)

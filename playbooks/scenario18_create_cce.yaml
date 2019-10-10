@@ -75,37 +75,37 @@
           script: "find_cce_cluster.py {{ cce_name }}"
           when: net_router is defined and net_network is defined
 
-#        - name: Add CCE node
-#          script: "create_cce_cluster_node.py {{ cce_name }} {{ cce_node }} {{ test_keypair_name }}"
-#          when: net_router is defined and net_network is defined
+        - name: Add CCE node
+          script: "create_cce_cluster_node.py {{ cce_name }} {{ cce_node }} {{ test_keypair_name }}"
+          when: net_router is defined and net_network is defined
 
-#        - name: Find CCE node
-#          script: "find_cce_cluster_node.py {{ cce_name }} {{ cce_node }}"
-#          when: net_router is defined and net_network is defined
+        - name: Find CCE node
+          script: "find_cce_cluster_node.py {{ cce_name }} {{ cce_node }}"
+          when: net_router is defined and net_network is defined
 
         - name: Get CCE credentials
           script: "get_cce_cluster_certificates.py {{ cce_name }}"
           when: net_router is defined and net_network is defined
 
-#      always:
-#        - name: Delete CCE node
-#          script: "delete_cce_cluster_node.py {{ cce_name }} {{ cce_node }}"
+      always:
+        - name: Delete CCE node
+          script: "delete_cce_cluster_node.py {{ cce_name }} {{ cce_node }}"
 
-#        - name: Delete CCE cluster
-#          script: "delete_cce_cluster.py {{ cce_name }}"
+        - name: Delete CCE cluster
+          script: "delete_cce_cluster.py {{ cce_name }}"
 
-#        - name: Delete VPC
-#          include_role:
-#            name: opentelekomcloud.vpc
-#          vars:
-#            router_name: "{{ vpc_name }}"
-#            network_name: "{{ nw_name }}"
-#            subnet_name: "{{ sn_name }}"
-#            state: absent
+        - name: Delete VPC
+          include_role:
+            name: opentelekomcloud.vpc
+          vars:
+            router_name: "{{ vpc_name }}"
+            network_name: "{{ nw_name }}"
+            subnet_name: "{{ sn_name }}"
+            state: absent
     
-#        - name: Delete Keypair
-#          include_role:
-#            name: opentelekomcloud.keypair
-#          vars:
-#            keypair_name: "{{ test_keypair_name }}"
-#            state: absent
+        - name: Delete Keypair
+          include_role:
+            name: opentelekomcloud.keypair
+          vars:
+            keypair_name: "{{ test_keypair_name }}"
+            state: absent

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-import openstack
 import sys
+import time
+
+import openstack
 from otcextensions import sdk
 
 openstack.enable_logging(True, http_debug=True)
@@ -18,16 +20,7 @@ timer = 0
 
 if cluster:
   conn.cce.delete_cluster(cluster)
-  while cluster is not None:
-    cluster = conn.cce.find_cluster(sys.argv[1])
-    if timer > 300:
-      print("Cluster run out if time")
-      break
-    elif cluster is None:
-      print("Cluster has been deleted")
-      break
-    timer = timer + 5
-    print("Current time in seconds: " + timer)
+  time.sleep(100)
   
 
 
