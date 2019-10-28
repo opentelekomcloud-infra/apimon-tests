@@ -8,7 +8,7 @@ import logging
 def allocate():
     conn = openstack.connect()
     network=conn.network.find_network('admin_external_net')
-    fipip = conn.network.create_ip(floating_network_id=network.id)
-    print(fipip.id)
+    fip = conn.network.create_ip(floating_network_id=network.id)
+    print(fip.id)
 
 allocate()
