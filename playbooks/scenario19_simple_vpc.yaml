@@ -28,12 +28,12 @@
           subnet_name: "{{ test_subnet_name }}"
           state: present
           enable_snat: False
-  
+
       - name: Create SecurityGroup
         os_security_group:
           name: "{{ test_security_group_name }}"
           description: Test Security group created by APImon
-  
+
       - name: Create SecurityGroupRule
         os_security_group_rule:
           security_group: "{{ test_security_group_name }}"
@@ -41,10 +41,10 @@
           port_range_min: 2208
           port_range_max: 2209
           remote_ip_prefix: 0.0.0.0/0
-      
+
       - name: List SecurityGroups with Rules
         script: list_security_groups.py
-    
+
       - name: List Networks
         os_networks_facts:
 
@@ -53,18 +53,19 @@
 
       - name: List Routers
         script: list_routers.py
-     
-      - name: Create floatingip 
+
+      - name: Create floatingip
         register: fip
         script: create_floatingip.py
 
       - name: List floatingips
         script: list_floatingips.py
-      
+
       always:
-     
-        - name: Delete floatingip 
+
+        - name: Delete floatingip
           script: delete_floatingip.py  {{ fip.stdout }}
+          when: fip is defined and fip.stdout is defined
 
         - name: Delete SecurityGroupRule
           os_security_group_rule:
@@ -74,12 +75,12 @@
             port_range_min: 2208
             port_range_max: 2209
             remote_ip_prefix: 0.0.0.0/0
-      
+
         - name: Delete SecurityGroup
           os_security_group:
             state: "absent"
             name: "{{ test_security_group_name }}"
-    
+
         - name: Delete VPC
           include_role:
             name: opentelekomcloud.vpc
