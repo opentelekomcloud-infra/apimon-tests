@@ -10,12 +10,7 @@
       display_name: "{{volume_name}}"
     register: volume
   
-  - name: Delete Volume
-    os_volume:
-      state: absent
-      display_name: "{{volume_name}}"
-
-  rescue:
+  always:
     - name: Delete Volume
       os_volume:
         state: absent
