@@ -83,7 +83,7 @@
             volume: "{{volume_name}}"
           ignore_errors: True
 
-       - name: Delete new snapshot
+        - name: Delete new snapshot
           os_volume_snapshot:
             state: absent
             display_name: "{{ (snapshot_name + '_new') }}"
