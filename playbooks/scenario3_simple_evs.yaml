@@ -63,7 +63,7 @@
             var: backup_info
 
         - name: Get info about volume
-          scripts: "get_volume_info.py {{ volume_name }}"
+          script: "get_volume_info.py {{ volume_name }}"
           register: volume_info
 
         - name: Print volume info
