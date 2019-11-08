@@ -53,13 +53,37 @@
         - name: Modify snapshot
           script: "modify_snapshot.py {{snapshot_name}} {{ (snapshot_name + '_new') }}"
 
+      rescue:
+        - name: Get info about backup
+          script: "get_backup_info.py {{ backup_name }}"
+          register: backup_info
+
+        - name: Print backup info
+          debug:
+            var: backup_info
+
+        - name: Get info about volume
+          script: "get_volume_info.py {{ volume_name }}"
+          register: volume_info
+
+        - name: Print volume info
+          debug:
+            var: volume_info
+
       always:
         # If we failed - cleanup what we can
         - name: Delete backup
           script: "delete_backup.py {{backup_name}}"
           ignore_errors: True
 
-        - name: Delete snapshot
+        - name: Delete original snapshot
+          os_volume_snapshot:
+            state: absent
+            display_name: "{{ snapshot_name }}"
+            volume: "{{volume_name}}"
+          ignore_errors: True
+
+        - name: Delete new snapshot
           os_volume_snapshot:
             state: absent
             display_name: "{{ (snapshot_name + '_new') }}"
