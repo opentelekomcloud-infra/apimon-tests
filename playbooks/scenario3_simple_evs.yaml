@@ -60,7 +60,7 @@
 
         - name: Print backup info
           debug:
-            var: backup_info
+            var: backup_info.stdout
 
         - name: Get info about volume
           script: "get_volume_info.py {{ volume_name }}"
@@ -68,7 +68,7 @@
 
         - name: Print volume info
           debug:
-            var: volume_info
+            var: volume_info.stdout
 
       always:
         # If we failed - cleanup what we can
