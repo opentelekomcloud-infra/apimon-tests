@@ -64,7 +64,7 @@
 
         - name: Get info about volume
           scripts: "get_volume_info.py {{ volume_name }}"
-          reguster: volume_info
+          register: volume_info
 
         - name: Print volume info
           debug:
