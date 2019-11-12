@@ -54,18 +54,18 @@
       - name: List Routers
         script: list_routers.py
 
-      - name: Create floatingip
-        register: fip
-        script: create_floatingip.py
+        #       - name: Create floatingip
+        #         register: fip
+        #         script: create_floatingip.py
 
       - name: List floatingips
         script: list_floatingips.py
 
       always:
 
-        - name: Delete floatingip
-          script: delete_floatingip.py  {{ fip.stdout }}
-          when: fip is defined and fip.stdout is defined
+        #         - name: Delete floatingip
+        #           script: delete_floatingip.py  {{ fip.stdout }}
+        #           when: fip is defined and fip.stdout is defined
 
         - name: Delete SecurityGroupRule
           os_security_group_rule:
