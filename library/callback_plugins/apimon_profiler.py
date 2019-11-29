@@ -394,8 +394,22 @@ class CallbackModule(CallbackBase):
                 module_args = invoked_args.get('module_args')
                 if 'availability_zone' in module_args:
                     attrs['az'] = module_args.get('availability_zone')
-            if rc == 3 and 'msg' in result._result:
-                attrs['raw_response'] = result._result['msg']
+                if rc == 3:
+                    msg = None
+                    if 'msg' in result._result:
+                        msg = result._result['msg']
+                    attrs['raw_response'] = msg
+                    attrs['anonymized_response'] = \
+                        self._anonymize_message(attrs['raw_response'])
+                    attrs['error_category'] = self._get_message_error_category(
+                        attrs['anonymized_response'])
+            else:
+                msg = None
+                if 'stderr_lines' in result._result:
+                    msg = result._result['stderr_lines'][-1]
+                elif 'module_stderr' in result._result:
+                    msg = result._result['module_stderr'].splitlines()[-1]
+                attrs['raw_response'] = msg
                 attrs['anonymized_response'] = \
                     self._anonymize_message(attrs['raw_response'])
                 attrs['error_category'] = self._get_message_error_category(
@@ -417,6 +431,7 @@ class CallbackModule(CallbackBase):
         self._update_task_stats(result, 0)
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
+        self._display.vvvv('Profiler: result: %s' % result._result)
         rc = 3 if not ignore_errors else 2
         self._update_task_stats(result, rc)
 
@@ -466,6 +481,11 @@ class CallbackModule(CallbackBase):
     def _send_alert_to_alerta(self, data):
         try:
             if True or self.alerta:
+                link = os.getenv(
+                    'APIMON_PROFILER_LOG_LINK',
+                    'https://swift/{job_id}'
+                ).format(job_id=os.getenv('TASK_EXECUTOR_JOB_ID'))
+
                 alert_attrs = dict(
                     environment=os.getenv('APIMON_PROFILER_ALERTA_ENV',
                                           'Production'),
@@ -474,9 +494,9 @@ class CallbackModule(CallbackBase):
                     resource=data.get('action'),
                     event=data.get('error_category',
                                    data.get('anonymized_response')),
-                    value=data.get('anonymized_response'),
+                    # value=data.get('anonymized_response'),
                     severity='major',
-                    text="https://swift.blablabla/" + os.getenv('TASK_EXECUTOR_JOB_ID'),
+                    value='<a href="{link}">Log</a>'.format(link=link),
                     origin=os.getenv('APIMON_PROFILER_ALERTA_ORIGIN',
                                      'Internal'),
                     raw_data=data.get('raw_response')
@@ -484,7 +504,7 @@ class CallbackModule(CallbackBase):
                 self._display.vvv('Alerta data %s' % alert_attrs)
                 self.alerta.send_alert(**alert_attrs)
         except Exception as e:
-            self._display.error('Profiler: Error sending alert to alerta %s' %
+            self._display.error('Profiler: Error sending alert to alerta: %s' %
                                 e)
         pass
 
@@ -573,8 +593,10 @@ class CallbackModule(CallbackBase):
         if 'The incident ID is:' in msg:
             result = "WAF"
             return result
+        if 'ResourceTimeout' in msg:
+            return 'ResourceTimeout'
 
-        return result
+        return result if result else msg
 
     def _anonymize_message(self, msg):
         # Anonymize remaining part
