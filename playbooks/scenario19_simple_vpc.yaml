@@ -48,6 +48,10 @@
       - name: List Networks
         os_networks_facts:
 
+      - name: Get single network details
+        os_networks_facts:
+          name: admin_external_net
+
       - name: List Subnets
         os_subnets_facts:
 

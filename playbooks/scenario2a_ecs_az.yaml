@@ -20,7 +20,7 @@
         test_network_name: "{{ ( prefix + '-net') }}"
 
     - block:
-  
+
       - name: Create Keypair
         include_role:
           name: opentelekomcloud.keypair
@@ -55,7 +55,7 @@
 
       - name: "Create server in {{item}}"
         include_role:
-          name: server_create_delete 
+          name: server_create_delete
         vars:
           server_keypair_name: "{{ test_keypair_name }}"
           server_fqdn: "{{ (item + '.' + test_server_fqdn) }}"
@@ -65,41 +65,21 @@
           security_group: "{{ test_security_group_name }}"
           availability_zone: "{{ item }}"
         loop: "{{ network_azs }}"
-   
-      - name: Delete SG
-        os_security_group:
-          name: "{{ test_security_group_name }}"
-          state: absent
 
-      - name: Delete VPC
-        include_role:
-          name: opentelekomcloud.vpc
-        vars:
-          state: absent
-          network_name: "{{ test_network_name }}"
-
-      - name: Delete KP
-        include_role:
-          name: opentelekomcloud.keypair
-        vars:
-          keypair_name: "{{ test_keypair_name }}"
-          state: absent
-          force_delete_keypair: true
-
-      rescue:
+      always:
         # do something here
         - name: Delete SG
           os_security_group:
             name: "{{ test_security_group_name }}"
             state: absent
-  
+
         - name: Delete VPC
           include_role:
             name: opentelekomcloud.vpc
           vars:
             state: absent
             network_name: "{{ test_network_name }}"
-  
+
         - name: Delete KP
           include_role:
             name: opentelekomcloud.keypair

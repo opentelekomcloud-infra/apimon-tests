@@ -63,6 +63,22 @@ DOCUMENTATION = '''
           ini:
               - section: callback_apimon_profiler
                 key: use_last_name_segment
+      alerta_endpoint:
+          description: Endpoint for sending alerta alerts
+          type: str
+          env:
+              - name: APIMON_PROFILER_ALERTA_ENDPOINT
+          ini:
+              - section: callback_apimon_profiler
+                key: alerta_endpoint
+      alerta_token:
+          description: Alerta authorization token
+          type: str
+          env:
+              - name: APIMON_PROFILER_ALERTA_TOKEN
+          ini:
+              - section: callback_apimon_profiler
+                key: alerta_token
 
 '''
 
@@ -83,9 +99,10 @@ Playbook run took 0 days, 0 hours, 0 minutes, 2 seconds
 '''
 
 import collections
-import time
-import os
 import logging
+import os
+import re
+import time
 
 from ansible.module_utils.six.moves import reduce
 from ansible.module_utils._text import to_text
@@ -97,6 +114,11 @@ try:
     import influxdb
 except ImportError:
     influxdb = None
+
+try:
+    from alertaclient.api import Client as alerta_client
+except ImportError:
+    alerta_client = None
 
 
 # define start time
@@ -150,13 +172,79 @@ def tasktime():
 
 class CallbackModule(CallbackBase):
     """
-    This callback module provides per-task timing, ongoing playbook elapsed
-    time and ordered list of top 20 longest running tasks at end.
+    This callback module processes information about each task and report
+    individual statistics into influxdb.
     """
     CALLBACK_VERSION = 2.0
     CALLBACK_TYPE = 'aggregate'
-    CALLBACK_NAME = 'os_profiler'
+    CALLBACK_NAME = 'apimon_profiler'
     CALLBACK_NEEDS_WHITELIST = True
+
+    ACTION_SERVICE_MAP = {
+        'os_auth': 'identity',
+        'os_client_config': 'general',
+        'os_flavor_info': 'compute',
+        'os_floating_ip': 'network',
+        'os_group': 'identity',
+        'os_group_info': 'identity',
+        'os_image': 'image',
+        'os_image_info': 'image',
+        'os_keypair': 'compute',
+        'os_keystone_domain': 'identity',
+        'os_keystone_domain_info': 'identity',
+        'os_keystone_endpoint': 'identity',
+        'os_keystone_role': 'identity',
+        'os_keystone_service': 'identity',
+        'os_listener': 'loadbalancer',
+        'os_loadbalancer': 'loadbalancer',
+        'os_member': 'loadbalancer',
+        'os_network': 'network',
+        'os_networks_info': 'network',
+        'os_object': 'object_store',
+        'os_pool': 'loadbalancer',
+        'os_port': 'network',
+        'os_port_info': 'network',
+        'os_project': 'identity',
+        'os_project_access': 'identity',
+        'os_project_info': 'identity',
+        'os_quota': 'quota',
+        'os_recordset': 'dns',
+        'os_router': 'network',
+        'os_security_group': 'network',
+        'os_security_group_rule': 'network',
+        'os_server': 'compute',
+        'os_server_action': 'compute',
+        'os_server_group': 'compute',
+        'os_server_info': 'compute',
+        'os_server_metadata': 'compute',
+        'os_server_volume': 'compute',
+        'os_stack': 'orchestrate',
+        'os_subnet': 'network',
+        'os_subnets_info': 'network',
+        'os_user': 'identity',
+        'os_user_group': 'identity',
+        'os_user_info': 'identity',
+        'os_user_role': 'identity',
+        'os_volume': 'block_storage',
+        'os_volume_snapshot': 'block_storage',
+        'os_zone': 'dns',
+        'os_flavor_facts': 'compute',
+        'os_image_facts': 'image',
+        'os_keystone_domain_facts': 'identity',
+        'os_networks_facts': 'network',
+        'os_port_facts': 'network',
+        'os_project_facts': 'identity',
+        'os_server_actions': 'compute',
+        'os_server_facts': 'compute',
+        'os_subnets_facts': 'network',
+        'os_user_facts': 'identity',
+        'otc_listener': 'loadbalancer',
+        'otc_loadbalancer': 'loadbalancer',
+        'otc_member': 'loadbalancer',
+        'otc_pool': 'loadbalancer',
+        'rds_datastore_info': 'rds',
+        'rds_flavor_info': 'rds'
+    }
 
     def __init__(self):
         self.stats = collections.OrderedDict()
@@ -172,8 +260,9 @@ class CallbackModule(CallbackBase):
                                                 var_options=var_options,
                                                 direct=direct)
 
+        self.measurement_name = self.get_option('influxdb_measurement')
+
         if influxdb:
-            self.measurement_name = self.get_option('influxdb_measurement')
             self.influxdb_host = self.get_option('influxdb_host')
             self.influxdb_port = self.get_option('influxdb_port')
             self.influxdb_user = self.get_option('influxdb_user')
@@ -193,6 +282,15 @@ class CallbackModule(CallbackBase):
         else:
             self._display.warning('InfluxDB python client is not available')
 
+        if alerta_client:
+            self.alerta_ep = self.get_option('alerta_endpoint')
+            self.alerta_token = self.get_option('alerta_token')
+            self.alerta = alerta_client(
+                endpoint=self.alerta_ep,
+                key=self.alerta_token)
+        else:
+            self._display.warning('Alerta python client is not available')
+
         self.use_last_name_segment = self.get_option('use_last_name_segment')
 
     def v2_playbook_on_start(self, playbook):
@@ -201,10 +299,14 @@ class CallbackModule(CallbackBase):
 
     def is_task_interesting(self, task):
         return (
-            task.action.startswith('os_') or
-            task.action.startswith('otc') or
-            task.action in ('script', 'command',
-                            'wait_for_connection', 'wait_for'))
+            task.action.startswith('os_')
+            or task.action.startswith('otc')
+            or task.action.startswith('opentelekomcloud')
+            # This is bad, but what else can we do?
+            or task.action[:3] in ['rds', 'cce']
+            or task.action in ('script', 'command',
+                               'wait_for_connection', 'wait_for')
+        )
 
     def v2_playbook_on_task_start(self, task, is_conditional):
         # NOTE(gtema): used attrs might be jinjas, so probably
@@ -222,27 +324,53 @@ class CallbackModule(CallbackBase):
                 # Just take the last segment after ':'
                 name_parts = name.split(':')
                 name = name_parts[-1].strip()
+            action = None
+            if task.action.startswith('opentelekomcloud'):
+                name_parts = task.action.split('.')
+                if len(name_parts) > 1:
+                    # action is last segment after '.'
+                    action = name_parts[-1]
+                else:
+                    action = task.action
+            else:
+                action = task.action
+
             stat_args = {
                 'start': time.time_ns(),
                 'name': name,
                 'long_name': '{play}:{name}'.format(
                     play=play, name=name),
-                'action': task.action,
+                'action': action,
                 'task': task,
                 'play': task._parent._play.get_name(),
                 'state': task.args.get('state')
             }
             az = task.args.get('availability_zone')
+            service = None
 
             for tag in task.tags:
                 # Look for tags on interesting tags
                 if 'az=' == tag[:3] and not az:
-                    # AZ is not available on task, but we want
-                    # to bind them
                     az = tag[3:]
+                if tag.startswith('service='):
+                    service = tag[8:]
+
+            if not service and action in self.ACTION_SERVICE_MAP:
+                service = self.ACTION_SERVICE_MAP[action]
+            elif not service:
+                # A very nasty fallback
+                if action.startswith('wait_for'):
+                    service = 'compute'
+                # We do not know the action>service mapping. Try to get first
+                # part of the name before '_'
+                name_parts = action.split('_')
+                if len(name_parts) > 1:
+                    service = name_parts[0]
 
             if az:
                 stat_args['az'] = to_text(az)
+            if service:
+                stat_args['service'] = to_text(service)
 
             self.stats[self.current] = stat_args
             if self._display.verbosity >= 2:
@@ -266,8 +394,17 @@ class CallbackModule(CallbackBase):
                 module_args = invoked_args.get('module_args')
                 if 'availability_zone' in module_args:
                     attrs['az'] = module_args.get('availability_zone')
+            if rc == 3 and 'msg' in result._result:
+                attrs['raw_response'] = result._result['msg']
+                attrs['anonymized_response'] = \
+                    self._anonymize_message(attrs['raw_response'])
+                attrs['error_category'] = self._get_message_error_category(
+                    attrs['anonymized_response'])
 
             self.stats[self.current].update(attrs)
+
+            if rc == 3:
+                self._send_alert_to_alerta(self.stats[self.current])
 
             self.write_metrics_to_influx(self.current, duration, rc)
 
@@ -299,6 +436,14 @@ class CallbackModule(CallbackBase):
         )
         if 'az' in task_data:
             tags['az'] = task_data['az']
+        if 'service' in task_data:
+            tags['service'] = task_data['service']
+        if 'raw_response' in task_data:
+            fields['raw_response'] = task_data['raw_response']
+        if 'anonymized_response' in task_data:
+            fields['anonymized_response'] = task_data['anonymized_response']
+        if 'error_category' in task_data:
+            tags['error_category'] = task_data['error_category']
         job_id = os.getenv('TASK_EXECUTOR_JOB_ID')
         if job_id:
             fields['job_id'] = job_id
@@ -318,8 +463,34 @@ class CallbackModule(CallbackBase):
             self._display.warning('Profiler: Error writing data to'
                                   'influxdb: %s' % e)
 
+    def _send_alert_to_alerta(self, data):
+        try:
+            if True or self.alerta:
+                alert_attrs = dict(
+                    environment=os.getenv('APIMON_PROFILER_ALERTA_ENV',
+                                          'Production'),
+                    service=['apimon', data.get('service')],
+                    customer=os.getenv('APIMON_PROFILER_ALERTA_CUSTOMER'),
+                    resource=data.get('action'),
+                    event=data.get('error_category',
+                                   data.get('anonymized_response')),
+                    value=data.get('anonymized_response'),
+                    severity='major',
+                    text="https://swift.blablabla/" + os.getenv('TASK_EXECUTOR_JOB_ID'),
+                    origin=os.getenv('APIMON_PROFILER_ALERTA_ORIGIN',
+                                     'Internal'),
+                    raw_data=data.get('raw_response')
+                )
+                self._display.vvv('Alerta data %s' % alert_attrs)
+                self.alerta.send_alert(**alert_attrs)
+        except Exception as e:
+            self._display.error('Profiler: Error sending alert to alerta %s' %
+                                e)
+        pass
+
     def v2_playbook_on_stats(self, stats):
         global te, t0
+
         te = time.time_ns()
         self._display.display(tasktime())
         self._display.display(filled("", fchar="="))
@@ -375,5 +546,52 @@ class CallbackModule(CallbackBase):
             self._write_data_to_influx(data)
 
         self._display.display(
-            'Overall duration of APImon tasks in playbook %s is: %s ms' %
-            (self.playbook_name, str(overall_apimon_duration)))
+            'Overall duration of APImon tasks in playbook %s is: %s s' %
+            (self.playbook_name, str(overall_apimon_duration / 1000)))
+
+    def _get_message_error_category(self, msg):
+        result = None
+        # SomeSDKException: 123
+        # ResourceNotFound: 404
+        exc = re.search(r"(?P<exception>\w*\b):\s(?P<code>\d{3})\b", msg)
+        if not exc:
+            # (HTTP 404)
+            exc = re.search(r"\((?P<exception>\w+) (?P<code>\d{3})\)", msg)
+        if exc:
+            result = "%s%s" % (exc.group('exception'), exc.group('code'))
+            return result
+
+        # contains InternalServerError
+        if re.search(r"Internal\s?Server\s?Error", msg):
+            result = "HTTP500"
+            return result
+        # Quota exceeded, quota exceeded, exceeded for quota
+        if 'uota ' in msg and ' exceed' in msg:
+            result = "QuotaExceeded"
+            return result
+        # WAF
+        if 'The incident ID is:' in msg:
+            result = "WAF"
+            return result
+
+        return result
+
+    def _anonymize_message(self, msg):
+        # Anonymize remaining part
+        # Project_id
+        result = msg
+        result = re.sub(r"[0-9a-z]{32}", "_omit_", result)
+        # UUID
+        result = re.sub(r"([0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}"
+                        "-[0-9a-z]{4}-[0-9a-z]{12})", "_omit_", result)
+        # WAF_ID likes
+        result = re.sub(r"[0-9]{5,}", "_omit_", result)
+        # Scenario random
+        result = re.sub(r"-[0-9a-zA-Z]{12}-", "_omit_", result)
+        # tmp12345678
+        result = re.sub(r"tmp[0-9a-zA-Z]{8}", "_omit_", result)
+        # IP
+        result = re.sub(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d*)?",
+                        "_omit_", result)
+
+        return result
