@@ -547,7 +547,7 @@ class CallbackModule(CallbackBase):
         try:
             if self.alerta:
                 self.alerta.heartbeat(
-                    origin='apimon_callback',
+                    origin='apimon_callback' + self.environment,
                     tags=['Environment=' + self.environment]
                 )
         except Exception as e:
