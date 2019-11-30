@@ -293,6 +293,12 @@ class CallbackModule(CallbackBase):
 
         self.use_last_name_segment = self.get_option('use_last_name_segment')
 
+        self.job_id = os.getenv('TASK_EXECUTOR_JOB_ID')
+        self.environment = os.getenv('APIMON_PROFILER_ALERTA_ENV',
+                                     'Production')
+        self.customer = os.getenv('APIMON_PROFILER_ALERTA_CUSTOMER')
+        self.origin = os.getenv('APIMON_PROFILER_ALERTA_ORIGIN')
+
     def v2_playbook_on_start(self, playbook):
         if not self.playbook_name:
             self.playbook_name = playbook._file_name
@@ -419,7 +425,8 @@ class CallbackModule(CallbackBase):
             self.stats[self.current].update(attrs)
 
             if rc == 3:
-                self._send_alert_to_alerta(self.stats[self.current])
+                self._send_alert_to_alerta(
+                    **self._prepare_alert_data(self.stats[self.current]))
 
             self.write_metrics_to_influx(self.current, duration, rc)
 
@@ -444,7 +451,7 @@ class CallbackModule(CallbackBase):
             name=task_data['name'],
             long_name=task_data['long_name'],
             state=task_data['state'],
-            result_str=rc_str_struct[rc]
+            result_str=rc_str_struct[rc],
         )
         fields = dict(
             duration=int(duration / 1000000),
@@ -460,9 +467,10 @@ class CallbackModule(CallbackBase):
             fields['anonymized_response'] = task_data['anonymized_response']
         if 'error_category' in task_data:
             tags['error_category'] = task_data['error_category']
-        job_id = os.getenv('TASK_EXECUTOR_JOB_ID')
-        if job_id:
-            fields['job_id'] = job_id
+        if self.environment:
+            tags['environment'] = self.environment
+        if self.job_id:
+            fields['job_id'] = self.job_id
         data = [dict(
             measurement=self.measurement_name,
             tags=tags,
@@ -478,36 +486,73 @@ class CallbackModule(CallbackBase):
         except Exception as e:
             self._display.warning('Profiler: Error writing data to'
                                   'influxdb: %s' % e)
+            self._send_alert_to_alerta(
+                resource='apimon_profile',
+                event='InfluxWriteError',
+                value=e.to_str(),
+                service=['apimon', 'profiler'],
+                severity='major'
+            )
 
-    def _send_alert_to_alerta(self, data):
+    def _prepare_alert_data(self, data):
+        link = os.getenv(
+            'APIMON_PROFILER_LOG_LINK',
+            'https://swift/{job_id}'
+        ).format(job_id=self.job_id)
+
+        alert_data = dict(
+            environment=self.environment,
+            service=['apimon', data.get('service')],
+            customer=self.customer,
+            resource=data.get('action'),
+            event=data.get('error_category',
+                           data.get('anonymized_response')),
+            # value=data.get('anonymized_response'),
+            severity='major',
+            value='<a href="{link}">Log</a>'.format(link=link),
+            raw_data=data.get('raw_response'),
+            attributes={
+                'logUrl': link
+            }
+        )
+        if self.customer:
+            alert_data['customer'] = self.customer
+        if self.origin:
+            alert_data['origin'] = self.origin
+
+        self._display.vvv('Alerta data %s' % alert_data)
+        return alert_data
+
+    def _send_alert_to_alerta(self, service, resource, event,
+                              environment,
+                              severity='major',
+                              **attrs):
+        if not environment:
+            environment = self.environment
+        if not service:
+            service = ['apimon']
         try:
-            if True or self.alerta:
-                link = os.getenv(
-                    'APIMON_PROFILER_LOG_LINK',
-                    'https://swift/{job_id}'
-                ).format(job_id=os.getenv('TASK_EXECUTOR_JOB_ID'))
-
-                alert_attrs = dict(
-                    environment=os.getenv('APIMON_PROFILER_ALERTA_ENV',
-                                          'Production'),
-                    service=['apimon', data.get('service')],
-                    customer=os.getenv('APIMON_PROFILER_ALERTA_CUSTOMER'),
-                    resource=data.get('action'),
-                    event=data.get('error_category',
-                                   data.get('anonymized_response')),
-                    # value=data.get('anonymized_response'),
-                    severity='major',
-                    value='<a href="{link}">Log</a>'.format(link=link),
-                    origin=os.getenv('APIMON_PROFILER_ALERTA_ORIGIN',
-                                     'Internal'),
-                    raw_data=data.get('raw_response')
-                )
-                self._display.vvv('Alerta data %s' % alert_attrs)
-                self.alerta.send_alert(**alert_attrs)
+            if self.alerta:
+                self.alerta.send_alert(
+                    environment=environment,
+                    resource=resource,
+                    event=event,
+                    service=service,
+                    **attrs)
         except Exception as e:
-            self._display.error('Profiler: Error sending alert to alerta: %s' %
-                                e)
-        pass
+            self._display.error(
+                 'Profiler: Error sending alert to alerta: %s' % e)
+
+    def _send_heartbeat_to_alerta(self):
+        try:
+            if self.alerta:
+                self.alerta.heartbeat(
+                    origin='apimon_callback',
+                    tags=['Environment=' + self.environment]
+                )
+        except Exception as e:
+            self._display.error(
+                 'Profiler: Error sending Heartbeat to alerta: %s' % e)
 
     def v2_playbook_on_stats(self, stats):
         global te, t0
@@ -551,7 +596,8 @@ class CallbackModule(CallbackBase):
                 tags=dict(
                     action='playbook_summary',
                     name=PurePosixPath(self.playbook_name).name,
-                    result_str=rc_str_struct[playbook_rc]
+                    result_str=rc_str_struct[playbook_rc],
+                    environment=self.environment
                 ),
                 fields=dict(
                     duration=int((te-t0)/1000000),
@@ -561,10 +607,11 @@ class CallbackModule(CallbackBase):
                     amount_failed=int(rcs[2]),
                     amount_failed_ignored=int(rcs[3]),
                     result_code=int(playbook_rc),
-                    job_id=os.getenv('TASK_EXECUTOR_JOB_ID')
+                    job_id=self.job_id
                 )
             )]
             self._write_data_to_influx(data)
+        self._send_heartbeat_to_alerta()
 
         self._display.display(
             'Overall duration of APImon tasks in playbook %s is: %s s' %
