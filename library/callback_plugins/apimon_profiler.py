@@ -404,16 +404,17 @@ class CallbackModule(CallbackBase):
                     attrs['error_category'] = self._get_message_error_category(
                         attrs['anonymized_response'])
             else:
-                msg = None
-                if 'stderr_lines' in result._result:
-                    msg = result._result['stderr_lines'][-1]
-                elif 'module_stderr' in result._result:
-                    msg = result._result['module_stderr'].splitlines()[-1]
-                attrs['raw_response'] = msg
-                attrs['anonymized_response'] = \
-                    self._anonymize_message(attrs['raw_response'])
-                attrs['error_category'] = self._get_message_error_category(
-                    attrs['anonymized_response'])
+                if rc == 3:
+                    msg = None
+                    if 'stderr_lines' in result._result:
+                        msg = result._result['stderr_lines'][-1]
+                    elif 'module_stderr' in result._result:
+                        msg = result._result['module_stderr'].splitlines()[-1]
+                    attrs['raw_response'] = msg
+                    attrs['anonymized_response'] = \
+                        self._anonymize_message(attrs['raw_response'])
+                    attrs['error_category'] = self._get_message_error_category(
+                        attrs['anonymized_response'])
 
             self.stats[self.current].update(attrs)
 
