@@ -534,6 +534,7 @@ class CallbackModule(CallbackBase):
         try:
             if self.alerta:
                 self.alerta.send_alert(
+                    severity=severity,
                     environment=environment,
                     resource=resource,
                     event=event,
