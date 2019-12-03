@@ -499,6 +499,7 @@ class CallbackModule(CallbackBase):
             'APIMON_PROFILER_LOG_LINK',
             'https://swift/{job_id}'
         ).format(job_id=self.job_id)
+        web_link = '<a href="{}">{}</a>' % (link, self.job_id)
 
         alert_data = dict(
             environment=self.environment,
@@ -512,7 +513,8 @@ class CallbackModule(CallbackBase):
             value='<a href="{link}">Log</a>'.format(link=link),
             raw_data=data.get('raw_response'),
             attributes={
-                'logUrl': link
+                'logUrl': link,
+                'logUrlWeb': web_link
             }
         )
         if self.customer:
