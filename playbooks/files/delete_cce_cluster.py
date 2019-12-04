@@ -19,9 +19,5 @@ cluster = conn.cce.find_cluster(sys.argv[1])
 timer = 0
 
 if cluster:
-  conn.cce.delete_cluster(cluster)
-  time.sleep(100)
-  
-
-
-
+    conn.cce.delete_cluster(cluster)
+    time.sleep(100)

@@ -3,7 +3,7 @@
 import openstack
 from otcextensions import sdk
 
-#openstack.enable_logging(True, http_debug=True)
+# openstack.enable_logging(True, http_debug=True)
 
 # An 'otc' is a cloud connection with name 'otc' configured in the clouds.yaml
 conn = openstack.connect()

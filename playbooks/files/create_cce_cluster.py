@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
 import sys
-import time
 
 import openstack
 from otcextensions import sdk
 
-openstack.enable_logging(True, http_debug=True)
+# openstack.enable_logging(True, http_debug=True)
 
 # An 'otc' is a cloud connection with name 'otc' configured in the clouds.yaml
 conn = openstack.connect()
@@ -35,7 +34,6 @@ dict = {
 }
 
 if (cluster is None):
-  cluster = conn.cce.create_cluster(**dict)
-  #time.sleep(720)
-  conn.cce.wait_for_cluster(cluster, status='Available', failures=None,
-                         interval=10, wait=960)
+    cluster = conn.cce.create_cluster(**dict)
+    job = conn.cce.get_job(cluster.job_id)
+    conn.cce.wait_for_job(job)

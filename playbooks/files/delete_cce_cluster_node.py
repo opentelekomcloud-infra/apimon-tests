@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import time
 
 import openstack
 from otcextensions import sdk
@@ -18,5 +17,6 @@ cluster = conn.cce.find_cluster(sys.argv[1])
 node = conn.cce.find_cluster_node(cluster, sys.argv[2])
 
 if cluster and node:
-  node = conn.cce.delete_cluster_node(cluster, node)
-  time.sleep(90)
+    node = conn.cce.delete_cluster_node(cluster, node)
+    # job = conn.cce.get_job(node.job_id)
+    # conn.cce.wait_for_job(job)
