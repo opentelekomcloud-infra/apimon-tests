@@ -14,4 +14,3 @@ conn = openstack.connect()
 sdk.register_otc_extensions(conn)
 
 cluster = conn.cce.find_cluster(sys.argv[1])
-print(cluster)

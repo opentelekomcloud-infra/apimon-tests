@@ -8,14 +8,11 @@
     - name: Set facts
       set_fact:
         test_keypair_name: "{{ (prefix + 'keypair') }}"
-        vpc_name: "{{ ( prefix + 'router' ) }}"
-        nw_name: "{{ ( prefix + 'network' ) }}"
-        sn_name: "{{ ( prefix + 'subnet' ) }}"
+        router_name: "{{ ( prefix + 'router' ) }}"
+        network_name: "{{ ( prefix + 'network' ) }}"
+        subnet_name: "{{ ( prefix + 'subnet' ) }}"
         cce_name: "{{ ( prefix + 'cluster' ) }}"
-        cce_node: "{{ ( prefix + 'node' ) }}"
-
-    - debug:
-        msg: "Using prefix {{ prefix }}"
+        node_name: "{{ ( prefix + 'node' ) }}"
 
     - name: List Keypairs
       script: list_keypairs.py
@@ -36,12 +33,9 @@
           include_role:
             name: opentelekomcloud.vpc
           vars:
-            router_name: "{{ vpc_name }}"
-            network_name: "{{ nw_name }}"
-            subnet_name: "{{ sn_name }}"
-
-        - name: List all Routers
-          script: list_routers.py
+            router_name: "{{ router_name }}"
+            network_name: "{{ network_name }}"
+            subnet_name: "{{ subnet_name }}"
 
         - name: Debug Router-ID
           debug:
@@ -76,11 +70,11 @@
           when: net_router is defined and net_network is defined
 
         - name: Add CCE node
-          script: "create_cce_cluster_node.py {{ cce_name }} {{ cce_node }} {{ test_keypair_name }}"
+          script: "create_cce_cluster_node.py {{ cce_name }} {{ node_name }} {{ test_keypair_name }}"
           when: net_router is defined and net_network is defined
 
         - name: Find CCE node
-          script: "find_cce_cluster_node.py {{ cce_name }} {{ cce_node }}"
+          script: "find_cce_cluster_node.py {{ cce_name }} {{ node_name }}"
           when: net_router is defined and net_network is defined
 
         - name: Get CCE credentials
@@ -89,7 +83,7 @@
 
       always:
         - name: Delete CCE node
-          script: "delete_cce_cluster_node.py {{ cce_name }} {{ cce_node }}"
+          script: "delete_cce_cluster_node.py {{ cce_name }} {{ node_name }}"
 
         - name: Delete CCE cluster
           script: "delete_cce_cluster.py {{ cce_name }}"
@@ -98,9 +92,9 @@
           include_role:
             name: opentelekomcloud.vpc
           vars:
-            router_name: "{{ vpc_name }}"
-            network_name: "{{ nw_name }}"
-            subnet_name: "{{ sn_name }}"
+            router_name: "{{ router_name }}"
+            network_name: "{{ network_name }}"
+            subnet_name: "{{ subnet_name }}"
             state: absent
     
         - name: Delete Keypair

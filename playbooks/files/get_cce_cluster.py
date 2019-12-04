@@ -13,4 +13,3 @@ sdk.register_otc_extensions(conn)
 
 
 cluster = conn.cce.get_cluster('e9d8539e-c894-11e9-a4c3-0255ac101618')
-print(cluster)
