@@ -644,8 +644,12 @@ class CallbackModule(CallbackBase):
         if 'The incident ID is:' in msg:
             result = "WAF"
             return result
-        if 'ResourceTimeout' in msg:
+        if 'ResourceTimeout' in msg or 'Read timed out' in msg:
             return 'ResourceTimeout'
+        if 'Connection reset by peer' in msg:
+            return 'ConnectionReset'
+        if 'Could not detach attachment' in msg and 'scenario16' in msg:
+            return 'HeatDetachVolume'
 
         return result if result else msg
 
