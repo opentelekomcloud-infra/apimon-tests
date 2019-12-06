@@ -37,7 +37,7 @@
     retries: 10
     delay: 1
     command: "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' linux@{{server_ip}} -i ~/.ssh/{{server_keypair_name}}.pem"
-    tags: "az={{availability_zone}}"
+    tags: ["az={{availability_zone}}", "service=compute"]
   
   - name: Delete server
     os_server:

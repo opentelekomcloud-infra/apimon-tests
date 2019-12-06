@@ -14,6 +14,7 @@
 
       - name: Check image endpoint
         script: check_image_ep.py
+        tags: 'service=image'
 
       - name: List Images
         os_image_facts:
