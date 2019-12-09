@@ -297,7 +297,7 @@ class CallbackModule(CallbackBase):
         self.environment = os.getenv('APIMON_PROFILER_ALERTA_ENV',
                                      'Production')
         self.customer = os.getenv('APIMON_PROFILER_ALERTA_CUSTOMER')
-        self.origin = os.getenv('APIMON_PROFILER_ALERTA_ORIGIN')
+        self.origin = os.getenv('APIMON_PROFILER_ORIGIN')
 
     def v2_playbook_on_start(self, playbook):
         if not self.playbook_name:
