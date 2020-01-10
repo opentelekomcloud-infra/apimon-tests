@@ -68,22 +68,24 @@
 
       always:
         # do something here
-        - name: Delete SG
-          os_security_group:
-            name: "{{ test_security_group_name }}"
-            state: absent
+        - block:
+            - name: Delete SG
+              os_security_group:
+                name: "{{ test_security_group_name }}"
+                state: absent
 
-        - name: Delete VPC
-          include_role:
-            name: opentelekomcloud.vpc
-          vars:
-            state: absent
-            network_name: "{{ test_network_name }}"
+            - name: Delete VPC
+              include_role:
+                name: opentelekomcloud.vpc
+              vars:
+                state: absent
+                network_name: "{{ test_network_name }}"
 
-        - name: Delete KP
-          include_role:
-            name: opentelekomcloud.keypair
-          vars:
-            keypair_name: "{{ test_keypair_name }}"
-            state: absent
-            force_delete_keypair: true
+            - name: Delete KP
+              include_role:
+                name: opentelekomcloud.keypair
+              vars:
+                keypair_name: "{{ test_keypair_name }}"
+                state: absent
+                force_delete_keypair: true
+          ignore_errors: true

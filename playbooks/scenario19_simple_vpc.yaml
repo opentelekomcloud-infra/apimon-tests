@@ -74,26 +74,29 @@
         #         - name: Delete floatingip
         #           script: delete_floatingip.py  {{ fip.stdout }}
         #           when: fip is defined and fip.stdout is defined
+        - block:
 
-        - name: Delete SecurityGroupRule
-          os_security_group_rule:
-            state: "absent"
-            security_group: "{{ test_security_group_name }}"
-            protocol: tcp
-            port_range_min: 2208
-            port_range_max: 2209
-            remote_ip_prefix: 0.0.0.0/0
+            - name: Delete SecurityGroupRule
+              os_security_group_rule:
+                state: "absent"
+                security_group: "{{ test_security_group_name }}"
+                protocol: tcp
+                port_range_min: 2208
+                port_range_max: 2209
+                remote_ip_prefix: 0.0.0.0/0
 
-        - name: Delete SecurityGroup
-          os_security_group:
-            state: "absent"
-            name: "{{ test_security_group_name }}"
+            - name: Delete SecurityGroup
+              os_security_group:
+                state: "absent"
+                name: "{{ test_security_group_name }}"
 
-        - name: Delete VPC
-          include_role:
-            name: opentelekomcloud.vpc
-          vars:
-            router_name: "{{ test_router_name }}"
-            network_name: "{{ test_network_name }}"
-            subnet_name: "{{ test_subnet_name }}"
-            state: absent
+            - name: Delete VPC
+              include_role:
+                name: opentelekomcloud.vpc
+              vars:
+                router_name: "{{ test_router_name }}"
+                network_name: "{{ test_network_name }}"
+                subnet_name: "{{ test_subnet_name }}"
+                state: absent
+
+          ignore_errors: true

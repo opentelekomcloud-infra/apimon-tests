@@ -123,27 +123,30 @@
           remote_ip_prefix: 0.0.0.0/0
 
       always:
-        - name: Cleanup Server with all required resources
-          include_role:
-            name: opentelekomcloud.bastion
-          vars:
-            state: absent
-            server_fqdn: "{{ test_server_fqdn }}"
+        - block:
+            - name: Cleanup Server with all required resources
+              include_role:
+                name: opentelekomcloud.bastion
+              vars:
+                state: absent
+                server_fqdn: "{{ test_server_fqdn }}"
 
-        - name: Delete SecurityGroup
-          os_security_group:
-            state: "absent"
-            name: "{{ test_security_group_name }}"
+            - name: Delete SecurityGroup
+              os_security_group:
+                state: "absent"
+                name: "{{ test_security_group_name }}"
 
-        - name: Delete VPC
-          include_role:
-            name: opentelekomcloud.vpc
-          vars:
-            state: absent
+            - name: Delete VPC
+              include_role:
+                name: opentelekomcloud.vpc
+              vars:
+                state: absent
 
-        - name: Delete Keypair
-          include_role:
-            name: opentelekomcloud.keypair
-          vars:
-            keypair_name: "{{ test_keypair_name }}"
-            state: absent
+            - name: Delete Keypair
+              include_role:
+                name: opentelekomcloud.keypair
+              vars:
+                keypair_name: "{{ test_keypair_name }}"
+                force_delete_keypair: true
+                state: absent
+          ignore_errors: true
