@@ -31,7 +31,7 @@
       port: 22
       host: "{{ server_ip }}"
       timeout: 600
-    tags: "az={{availability_zone}}"
+    tags: ["az={{availability_zone}}", "service=compute"]
   
   - name: Try connecting
     retries: 10
