@@ -509,7 +509,7 @@ class CallbackModule(CallbackBase):
             event=data.get('error_category',
                            data.get('anonymized_response')),
             severity='major',
-            value='{link}'.format(link=link),
+            value=data.get('anonymized_response'),
             raw_data=data.get('raw_response'),
             attributes={
                 'logUrl': link,
@@ -550,7 +550,7 @@ class CallbackModule(CallbackBase):
             if self.alerta:
                 self.alerta.heartbeat(
                     origin='apimon_callback' + self.environment,
-                    tags=['Environment=' + self.environment]
+                    tags=['apimon_profiler']
                 )
         except Exception as e:
             self._display.error(
