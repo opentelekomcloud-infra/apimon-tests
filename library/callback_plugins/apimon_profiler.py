@@ -513,7 +513,8 @@ class CallbackModule(CallbackBase):
             raw_data=data.get('raw_response'),
             attributes={
                 'logUrl': link,
-                'logUrlWeb': web_link
+                'logUrlWeb': web_link,
+                'state': data.get('state', 'unknown')
             }
         )
         if self.customer:
