@@ -34,17 +34,19 @@
           url: http://download.cirros-cloud.net/0.4.0/cirros-0.4.0-x86_64-disk.img
           dest: /tmp/ansible/images/cirros.img
 
-      - name: Upload cirros image
-        os_image:
-          name: cirros
-          container_format: bare
-          disk_format: qcow2
-          state: present
-          min_disk: 1
-          timeout: 300
-          filename: /tmp/ansible/images/cirros.img
+          #      - name: Upload cirros image
+          #        os_image:
+          #          name: cirros
+          #          container_format: bare
+          #          disk_format: qcow2
+          #          state: present
+          #          min_disk: 1
+          #          timeout: 300
+          #          filename: /tmp/ansible/images/cirros.img
 
-      - name: Delete cirros image
-        os_image:
-          name: cirros
-          state: absent
+      always:
+
+        - name: Delete cirros image
+          os_image:
+            name: cirros
+            state: absent
