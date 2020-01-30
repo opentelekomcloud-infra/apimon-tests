@@ -17,4 +17,4 @@ backup = conn.block_storage.create_backup(volume_id=volume_id,
 
 conn.block_storage.wait_for_status(backup,
                                    status='available',
-                                   wait=1200)
+                                   wait=2400)
