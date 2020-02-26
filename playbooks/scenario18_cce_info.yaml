@@ -3,7 +3,7 @@
 - name: Scenario 18 - CCE Info
   hosts: localhost
   collections:
-    - opentelekomcloud.core
+    - opentelekomcloud.cloud
   tasks:
 
     - name: Get CCE cluster info
