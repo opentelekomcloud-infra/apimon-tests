@@ -5,3 +5,6 @@ roles:
   - name: opentelekomcloud.bastion
   - name: opentelekomcloud.server_common
   - name: opentelekomcloud.security_group
+collections:
+  - name: opentelekomcloud.cloud
+    version: 0.0.1
