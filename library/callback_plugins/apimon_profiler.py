@@ -219,6 +219,7 @@ class CallbackModule(CallbackBase):
         'os_server_metadata': 'compute',
         'os_server_volume': 'compute',
         'os_stack': 'orchestrate',
+        'os_stack_info': 'orchestrate',
         'os_subnet': 'network',
         'os_subnets_info': 'network',
         'os_user': 'identity',
