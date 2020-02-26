@@ -1,6 +1,6 @@
 ---
 
-- name: Test RDS
+- name: Scenario 20 - RDS info
   hosts: localhost
   collections:
     - opentelekomcloud.cloud

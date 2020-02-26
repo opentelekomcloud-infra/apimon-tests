@@ -244,7 +244,11 @@ class CallbackModule(CallbackBase):
         'otc_member': 'loadbalancer',
         'otc_pool': 'loadbalancer',
         'rds_datastore_info': 'rds',
-        'rds_flavor_info': 'rds'
+        'rds_flavor_info': 'rds',
+        'as_config_info': 'as',
+        'as_group_info': 'as',
+        'cce_cluster_info': 'cce',
+        'cce_cluster_cert_info': 'cce'
     }
 
     def __init__(self):
