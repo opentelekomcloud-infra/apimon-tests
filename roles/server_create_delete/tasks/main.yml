@@ -46,6 +46,10 @@
       delete_fip: True
 
   rescue:
+    - name: Debug server info
+      debug:
+        var: server
+        
     - name: Delete server
       os_server:
         state: absent
