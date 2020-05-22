@@ -12,6 +12,7 @@
     - name: Get The Public Network
       os_networks_info:
         name:  admin_external_net
+      register: nets
 
     - name: Delete Stack
       os_stack:
@@ -30,7 +31,7 @@
           template: "files/scenario16_stack_template.yaml"
           name: "{{ stack_name }}"
           parameters:
-            public_net_id: "{{ ansible_facts['openstack_networks'][0]['id'] }}"
+            public_net_id: "{{ nets['openstack_networks'][0]['id'] }}"
 
       - name: Query Stack
         os_stack_facts:

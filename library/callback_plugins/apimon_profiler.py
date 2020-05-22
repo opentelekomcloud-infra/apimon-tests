@@ -401,6 +401,11 @@ class CallbackModule(CallbackBase):
 
             invoked_args = result._result.get('invocation')
 
+            if not invoked_args:
+                self._display.error('Module error %s' %
+                                    result._result.get('msg'))
+                return
+
             attrs = {
                 'changed': result._result['changed'],
                 'end': time.time_ns(),
