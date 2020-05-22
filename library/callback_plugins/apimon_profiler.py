@@ -1,9 +1,27 @@
 # GNU General Public License v3.0+
 # (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-# Make coding more python3-ish
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
+import collections
+import os
+import re
+import time
+
+from ansible.module_utils._text import to_text
+from ansible.module_utils.six.moves import reduce
+from ansible.plugins.callback import CallbackBase
+
+from pathlib import PurePosixPath
+
+try:
+    import influxdb
+except ImportError:
+    influxdb = None
+
+try:
+    from alertaclient.api import Client as alerta_client
+except ImportError:
+    alerta_client = None
+
 
 DOCUMENTATION = '''
     callback: apimon_profiler
@@ -98,28 +116,6 @@ Playbook run took 0 days, 0 hours, 0 minutes, 2 seconds
 
 '''
 
-import collections
-import logging
-import os
-import re
-import time
-
-from ansible.module_utils.six.moves import reduce
-from ansible.module_utils._text import to_text
-from ansible.plugins.callback import CallbackBase
-
-from pathlib import PurePosixPath
-
-try:
-    import influxdb
-except ImportError:
-    influxdb = None
-
-try:
-    from alertaclient.api import Client as alerta_client
-except ImportError:
-    alerta_client = None
-
 
 # define start time
 t0 = tn = time.time_ns()
@@ -171,7 +167,8 @@ def tasktime():
 
 
 class CallbackModule(CallbackBase):
-    """
+    """Callback ansible module
+
     This callback module processes information about each task and report
     individual statistics into influxdb.
     """
@@ -354,7 +351,7 @@ class CallbackModule(CallbackBase):
                 'action': action,
                 'task': task,
                 'play': task._parent._play.get_name(),
-                'state': task.args.get('state')
+                'state': to_text(task.args.get('state'))
             }
             az = task.args.get('availability_zone')
             service = None
@@ -405,6 +402,8 @@ class CallbackModule(CallbackBase):
                 module_args = invoked_args.get('module_args')
                 if 'availability_zone' in module_args:
                     attrs['az'] = module_args.get('availability_zone')
+                if 'state' in module_args:
+                    attrs['state'] = module_args.get('state')
                 if rc == 3:
                     msg = None
                     if 'msg' in result._result:
@@ -551,17 +550,6 @@ class CallbackModule(CallbackBase):
             self._display.error(
                  'Profiler: Error sending alert to alerta: %s' % e)
 
-    def _send_heartbeat_to_alerta(self):
-        try:
-            if self.alerta:
-                self.alerta.heartbeat(
-                    origin='apimon_callback' + self.environment,
-                    tags=['apimon_profiler']
-                )
-        except Exception as e:
-            self._display.error(
-                 'Profiler: Error sending Heartbeat to alerta: %s' % e)
-
     def v2_playbook_on_stats(self, stats):
         global te, t0
 
@@ -619,7 +607,6 @@ class CallbackModule(CallbackBase):
                 )
             )]
             self._write_data_to_influx(data)
-        self._send_heartbeat_to_alerta()
 
         self._display.display(
             'Overall duration of APImon tasks in playbook %s is: %s s' %
