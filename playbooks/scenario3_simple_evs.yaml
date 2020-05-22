@@ -54,6 +54,7 @@
           tags:
             - "service=block_storage"
             - "metric=create_volume_backup"
+            - "az=default"
 
         - name: Restore backup
           script: "restore_backup.py {{backup_name}} {{volume_name}} {{ (volume_name + 'new') }}"
