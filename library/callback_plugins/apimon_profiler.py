@@ -437,10 +437,14 @@ class CallbackModule(CallbackBase):
                     elif 'module_stderr' in result._result:
                         msg = result._result['module_stderr'].splitlines()[-1]
                     attrs['raw_response'] = msg
-                    attrs['anonymized_response'] = \
-                        self._anonymize_message(attrs['raw_response'])
-                    attrs['error_category'] = self._get_message_error_category(
-                        attrs['anonymized_response'])
+                    try:
+                        attrs['anonymized_response'] = \
+                            self._anonymize_message(attrs['raw_response'])
+                        attrs['error_category'] = \
+                            self._get_message_error_category(
+                            attrs['anonymized_response'])
+                    except Exception:
+                        pass
 
             self.stats[self.current].update(attrs)
 
@@ -629,31 +633,34 @@ class CallbackModule(CallbackBase):
         playbook_name = PurePosixPath(self.playbook_name).name
 
         if self.influxdb_client:
-            rescued = 0
-            for (host, val) in stats.rescued.items():
-                if val:
-                    rescued += val
-            playbook_rc = 0 if (rcs[3] == 0 and rescued == 0) else 3
-            data = [dict(
-                measurement=self.measurement_name,
-                tags=dict(
-                    action='playbook_summary',
-                    name=playbook_name,
-                    result_str=rc_str_struct[playbook_rc],
-                    environment=self.environment
-                ),
-                fields=dict(
-                    duration=int((te-t0)/1000000),
-                    apimon_duration=int(overall_apimon_duration),
-                    amount_passed=int(rcs[0]),
-                    amount_skipped=int(rcs[1]),
-                    amount_failed=int(rcs[2]),
-                    amount_failed_ignored=int(rcs[3]),
-                    result_code=int(playbook_rc),
-                    job_id=self.job_id
-                )
-            )]
-            self._write_data_to_influx(data)
+            try:
+                rescued = 0
+                for (host, val) in stats.rescued.items():
+                    if val:
+                        rescued += val
+                playbook_rc = 0 if (rcs[3] == 0 and rescued == 0) else 3
+                data = [dict(
+                    measurement=self.measurement_name,
+                    tags=dict(
+                        action='playbook_summary',
+                        name=playbook_name,
+                        result_str=rc_str_struct[playbook_rc],
+                        environment=self.environment
+                    ),
+                    fields=dict(
+                        duration=int((te-t0)/1000000),
+                        apimon_duration=int(overall_apimon_duration),
+                        amount_passed=int(rcs[0]),
+                        amount_skipped=int(rcs[1]),
+                        amount_failed=int(rcs[2]),
+                        amount_failed_ignored=int(rcs[3]),
+                        result_code=int(playbook_rc),
+                        job_id=self.job_id
+                    )
+                )]
+                self._write_data_to_influx(data)
+            except Exception:
+                self._display.error('Error sendin metrics')
 
             try:
                 if self._metrics:
