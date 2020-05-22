@@ -393,7 +393,7 @@ class CallbackModule(CallbackBase):
         else:
             self.current = None
 
-    def _update_task_stats(self, result, rc):
+    def _update_task_stats(self, result, rc) -> None:
         if self.current is not None:
             duration = time.time_ns() - self.stats[self.current]['start']
             # NS to MS
@@ -450,13 +450,17 @@ class CallbackModule(CallbackBase):
 
             try:
                 if 'metrics' in self.stats[self.current]:
+                    az = attrs.get('az')
+                    if not az and 'az' in self.stats[self.current]:
+                        az = self.stats[self.current]['az']
                     for metric_name in self.stats[self.current]['metrics']:
 
                         if metric_name not in self._metrics:
                             self._metrics[metric_name] = {}
                         metric_obj = self._metrics[metric_name]
-                        if 'az' in attrs:
-                            metric = metric_obj.get(attrs['az'], {})
+                        metric = None
+                        if 'az':
+                            metric = metric_obj.get(az, {})
                         if not metric:
                             metric = {}
 
@@ -464,13 +468,13 @@ class CallbackModule(CallbackBase):
                             'duration': metric.get('duration', 0) + duration,
                             'rc': rc
                         }
-                        if 'az' in attrs:
-                            metric_obj[attrs['az']] = metric_attrs
+                        if az:
+                            metric_obj[az] = metric_attrs
                         else:
                             metric_obj = metric_attrs
                         self._metrics[metric_name] = metric_obj
-            except Exception:
-                self._display.warning('Error trying to update metrics')
+            except Exception as e:
+                self._display.error('Error trying to update metrics: %s' % e)
 
             if rc == 3:
                 self._send_alert_to_alerta(
@@ -606,7 +610,7 @@ class CallbackModule(CallbackBase):
 
         results = self.stats.items()
 
-        self._display.vvv('Metrics to be emmited are: %s' % self._metrics)
+        self._display.vvv('Metrics to be emitted are: %s' % self._metrics)
         overall_apimon_duration = 0
         rcs = {
             0: 0,
@@ -659,43 +663,27 @@ class CallbackModule(CallbackBase):
                     )
                 )]
                 self._write_data_to_influx(data)
-            except Exception:
-                self._display.error('Error sendin metrics')
+            except Exception as e:
+                self._display.error('Error sending metrics: %s' % e)
 
             try:
                 if self._metrics:
                     data = []
                     for name, metric in self._metrics.items():
-                        for az, vals in metric.items():
-                            dt = dict(
-                                measurement='apimon.' + name,
-                                tags=dict(
-                                    az=az,
-                                    environment=self.environment,
-                                    scenario=playbook_name,
-                                    result_str=rc_str_struct[vals.get('rc',
-                                                                      -1)]
-                                ),
-                                fields=dict(
-                                    duration=int(vals.get('duration', -1)),
-                                    result=int(vals.get('rc', -1)),
-                                    attempted=1
-                                )
-                            )
-                            if vals['rc'] == 0:
-                                dt['fields']['passed'] = 1
-                            elif vals['rc'] == 1:
-                                dt['fields']['skipped'] = 1
-                            elif vals['rc'] == 2:
-                                dt['fields']['failed_ignored'] = 1
-                            elif vals['rc'] == 3:
-                                dt['fields']['failed'] = 1
-                            data.append(dt)
+                        if 'rc' not in metric:
+                            for az, vals in metric.items():
+                                data.append(self._get_metric_data(
+                                    name, vals,
+                                    playbook_name=playbook_name, az=az))
+                        else:
+                            data.append(self._get_metric_data(
+                                name, metric,
+                                playbook_name=playbook_name))
                     if data:
                         self._write_data_to_influx(data)
 
             except Exception as e:
-                self._display.warning('Error emmiting additional metrics: %s' %
+                self._display.warning('Error emitting additional metrics: %s' %
                                       e)
 
         self._display.display(
@@ -735,7 +723,35 @@ class CallbackModule(CallbackBase):
 
         return result if result else msg
 
-    def _anonymize_message(self, msg):
+    def _get_metric_data(self, name: str,
+                         vals: dict, **kwargs) -> dict:
+        tags = dict(
+            environment=self.environment,
+            result_str=rc_str_struct[vals.get('rc', -1)]
+        )
+        for k, v in kwargs.items():
+            tags[k] = v
+
+        dt = dict(
+            measurement='apimon.' + name,
+            tags=tags,
+            fields=dict(
+                duration=int(vals.get('duration', -1)),
+                result=int(vals.get('rc', -1)),
+                attempted=1
+            )
+        )
+        if vals['rc'] == 0:
+            dt['fields']['passed'] = 1
+        elif vals['rc'] == 1:
+            dt['fields']['skipped'] = 1
+        elif vals['rc'] == 2:
+            dt['fields']['failed_ignored'] = 1
+        elif vals['rc'] == 3:
+            dt['fields']['failed'] = 1
+        return dt
+
+    def _anonymize_message(self, msg: str) -> str:
         # Anonymize remaining part
         # Project_id
         result = msg
