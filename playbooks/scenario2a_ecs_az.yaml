@@ -52,7 +52,7 @@
         register: networks
 
       - set_fact:
-          network_azs: "{{ networks[0]['availability_zones'] }}"
+          network_azs: "{{ networks['openstack_networks'][0]['availability_zones'] }}"
 
       - name: "Create server in {{item}}"
         include_role:

@@ -47,15 +47,14 @@
         script: list_security_groups.py
         tags: 'service=network'
 
-      - name: List Networks
-        os_networks_facts:
-
       - name: Get single network details
-        os_networks_facts:
+        os_networks_info:
           name: admin_external_net
+        register: nets
 
       - name: List Subnets
-        os_subnets_facts:
+        os_subnets_info:
+        register: subnets
 
       - name: List Routers
         script: list_routers.py
