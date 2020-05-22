@@ -34,12 +34,13 @@
         name: opentelekomcloud.keypair
       vars:
         keypair_name: "{{ test_keypair_name }}"
+        state: "present"
 
     - name: List Networks
-      os_networks_facts:
+      os_networks_info:
 
     - name: List Subnets
-      os_subnets_facts:
+      os_subnets_info:
 
     - name: List Routers
       script: list_routers.py
@@ -50,6 +51,8 @@
       - name: Create VPC (Router + Net + Subnet)
         include_role:
           name: opentelekomcloud.vpc
+        vars:
+          state: "present"
 
       - name: List SecurityGroups with Rules
         script: list_security_groups.py
@@ -69,13 +72,13 @@
           remote_ip_prefix: 0.0.0.0/0
 
       - name: List Images
-        os_image_facts:
+        os_image_info:
 
       - name: List Flavors
-        os_flavor_facts:
+        os_flavor_info:
 
       - name: List Servers
-        os_server_facts:
+        os_server_info:
 
       - name: Create Server with all required resources
         include_role:
@@ -83,6 +86,7 @@
         vars:
           server_keypair_name: "{{ test_keypair_name }}"
           server_fqdn: "{{ test_server_fqdn }}"
+          state: "present"
 
       - name: Get Server metadata
         script: "get_server_metadata.py {{ test_server_fqdn }}"
@@ -128,7 +132,7 @@
               include_role:
                 name: opentelekomcloud.bastion
               vars:
-                state: absent
+                state: "absent"
                 server_fqdn: "{{ test_server_fqdn }}"
 
             - name: Delete SecurityGroup
@@ -148,5 +152,5 @@
               vars:
                 keypair_name: "{{ test_keypair_name }}"
                 force_delete_keypair: true
-                state: absent
+                state: "absent"
           ignore_errors: true
