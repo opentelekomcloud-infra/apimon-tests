@@ -401,13 +401,8 @@ class CallbackModule(CallbackBase):
 
             invoked_args = result._result.get('invocation')
 
-            if not invoked_args:
-                self._display.error('Module error %s' %
-                                    result._result.get('msg'))
-                return
-
             attrs = {
-                'changed': result._result['changed'],
+                'changed': result._result.get('changed', 'False'),
                 'end': time.time_ns(),
                 'duration': duration,
                 'rc': rc
@@ -426,10 +421,14 @@ class CallbackModule(CallbackBase):
                     if 'msg' in result._result:
                         msg = result._result['msg']
                     attrs['raw_response'] = msg
-                    attrs['anonymized_response'] = \
-                        self._anonymize_message(attrs['raw_response'])
-                    attrs['error_category'] = self._get_message_error_category(
-                        attrs['anonymized_response'])
+                    try:
+                        attrs['anonymized_response'] = \
+                            self._anonymize_message(attrs['raw_response'])
+                        attrs['error_category'] = \
+                            self._get_message_error_category(
+                            attrs['anonymized_response'])
+                    except Exception:
+                        pass
             else:
                 if rc == 3:
                     msg = None
