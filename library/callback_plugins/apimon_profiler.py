@@ -298,7 +298,7 @@ class CallbackModule(CallbackBase):
         self.use_last_name_segment = self.get_option('use_last_name_segment')
 
         self.job_id = os.getenv('TASK_EXECUTOR_JOB_ID')
-        self.environment = os.getenv('APIMON_PROFILER_ALERTA_ENV',
+        self.environment = os.getenv('APIMON_PROFILER_ENVIRONMENT',
                                      'Production')
         self.customer = os.getenv('APIMON_PROFILER_ALERTA_CUSTOMER')
         self.origin = os.getenv('APIMON_PROFILER_ORIGIN')
