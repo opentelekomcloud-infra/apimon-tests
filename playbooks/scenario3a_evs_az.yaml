@@ -23,7 +23,7 @@
       - set_fact:
           network_azs: "{{ nets['openstack_networks'][0]['availability_zones'] }}"
 
-      - name: "Create Volume in {{item}}"
+      - name: "Create Volume in AZs"
         include_role:
           name: volume_create_delete
         vars:

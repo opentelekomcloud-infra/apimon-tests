@@ -2,7 +2,7 @@
 # tasks file for roles/volume_create_delete
 
 - block:
-  - name: Create Volume
+  - name: "Create Volume in {{ availability_zone }}"
     os_volume:
       state: present
       availability_zone: "{{ availability_zone | default(omit) }}"
@@ -11,7 +11,7 @@
     register: volume
   
   always:
-    - name: Delete Volume
+    - name: "Delete Volume"
       os_volume:
         state: absent
         display_name: "{{volume_name}}"
