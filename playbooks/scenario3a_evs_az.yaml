@@ -14,13 +14,14 @@
         test_volume_name: "{{ (prefix + '-test_volume_apimon') }}"
 
     - block:
-  
+
       - name: Get network facts
-        os_networks_facts:
+        os_networks_info:
           name: admin_external_net
+        register: nets
 
       - set_fact:
-          network_azs: "{{ openstack_networks[0]['availability_zones'] }}"
+          network_azs: "{{ nets['openstack_networks'][0]['availability_zones'] }}"
 
       - name: "Create Volume in {{item}}"
         include_role:
