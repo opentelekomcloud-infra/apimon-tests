@@ -10,7 +10,7 @@
       script: check_orchestration_ep.py
 
     - name: Get The Public Network
-      os_networks_facts:
+      os_networks_info:
         name:  admin_external_net
 
     - name: Delete Stack
