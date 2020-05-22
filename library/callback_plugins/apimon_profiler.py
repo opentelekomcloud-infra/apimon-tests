@@ -122,6 +122,7 @@ t0 = tn = time.time_ns()
 te = 0
 
 rc_str_struct = {
+    -1: 'Undefined',
     0: 'Passed',
     1: 'Skipped',
     2: 'FailedIgnored',
@@ -253,6 +254,7 @@ class CallbackModule(CallbackBase):
         self.current = None
         self.playbook_name = None
         self.influxdb_client = None
+        self._metrics = collections.OrderedDict()
 
         super(CallbackModule, self).__init__()
 
@@ -355,6 +357,7 @@ class CallbackModule(CallbackBase):
             }
             az = task.args.get('availability_zone')
             service = None
+            metrics = []
 
             for tag in task.tags:
                 # Look for tags on interesting tags
@@ -362,6 +365,8 @@ class CallbackModule(CallbackBase):
                     az = tag[3:]
                 if tag.startswith('service='):
                     service = tag[8:]
+                if tag.startswith('metric='):
+                    metrics.append(to_text(tag[7:]))
 
             if not service and action in self.ACTION_SERVICE_MAP:
                 service = self.ACTION_SERVICE_MAP[action]
@@ -379,6 +384,8 @@ class CallbackModule(CallbackBase):
                 stat_args['az'] = to_text(az)
             if service:
                 stat_args['service'] = to_text(service)
+            if metrics:
+                stat_args['metrics'] = metrics
 
             self.stats[self.current] = stat_args
             if self._display.verbosity >= 2:
@@ -389,8 +396,11 @@ class CallbackModule(CallbackBase):
     def _update_task_stats(self, result, rc):
         if self.current is not None:
             duration = time.time_ns() - self.stats[self.current]['start']
+            # NS to MS
+            duration = int(duration / 1000000)
 
             invoked_args = result._result.get('invocation')
+
             attrs = {
                 'changed': result._result['changed'],
                 'end': time.time_ns(),
@@ -401,7 +411,9 @@ class CallbackModule(CallbackBase):
                     and 'module_args' in invoked_args):
                 module_args = invoked_args.get('module_args')
                 if 'availability_zone' in module_args:
-                    attrs['az'] = module_args.get('availability_zone')
+                    attrs['az'] = module_args['availability_zone']
+                    if not attrs['az']:
+                        attrs['az'] = 'default'
                 if 'state' in module_args:
                     attrs['state'] = module_args.get('state')
                 if rc == 3:
@@ -427,6 +439,30 @@ class CallbackModule(CallbackBase):
                         attrs['anonymized_response'])
 
             self.stats[self.current].update(attrs)
+
+            try:
+                if 'metrics' in self.stats[self.current]:
+                    for metric_name in self.stats[self.current]['metrics']:
+
+                        if metric_name not in self._metrics:
+                            self._metrics[metric_name] = {}
+                        metric_obj = self._metrics[metric_name]
+                        if 'az' in attrs:
+                            metric = metric_obj.get(attrs['az'], {})
+                        if not metric:
+                            metric = {}
+
+                        metric_attrs = {
+                            'duration': metric.get('duration', 0) + duration,
+                            'rc': rc
+                        }
+                        if 'az' in attrs:
+                            metric_obj[attrs['az']] = metric_attrs
+                        else:
+                            metric_obj = metric_attrs
+                        self._metrics[metric_name] = metric_obj
+            except Exception:
+                self._display.warning('Error trying to update metrics')
 
             if rc == 3:
                 self._send_alert_to_alerta(
@@ -458,7 +494,7 @@ class CallbackModule(CallbackBase):
             result_str=rc_str_struct[rc],
         )
         fields = dict(
-            duration=int(duration / 1000000),
+            duration=int(duration),
             result_code=int(rc)
         )
         if 'az' in task_data:
@@ -490,13 +526,16 @@ class CallbackModule(CallbackBase):
         except Exception as e:
             self._display.warning('Profiler: Error writing data to'
                                   'influxdb: %s' % e)
-            self._send_alert_to_alerta(
-                resource='apimon_profile',
-                event='InfluxWriteError',
-                value=e.to_str(),
-                service=['apimon', 'profiler'],
-                severity='major'
-            )
+            try:
+                self._send_alert_to_alerta(
+                    resource='apimon_profile',
+                    event='InfluxWriteError',
+                    value=str(e),
+                    service=['apimon', 'profiler'],
+                    severity='major'
+                )
+            except Exception:
+                self._display.warning('Error raising alert')
 
     def _prepare_alert_data(self, data):
         link = os.getenv(
@@ -558,6 +597,8 @@ class CallbackModule(CallbackBase):
         self._display.display(filled("", fchar="="))
 
         results = self.stats.items()
+
+        self._display.vvv('Metrics to be emmited are: %s' % self._metrics)
         overall_apimon_duration = 0
         rcs = {
             0: 0,
@@ -568,7 +609,7 @@ class CallbackModule(CallbackBase):
 
         # Print the timings
         for uuid, result in results:
-            duration = result['duration'] / 1000000
+            duration = result['duration']
             overall_apimon_duration = overall_apimon_duration + duration
             rcs.update({result['rc']: rcs[result['rc']] + 1})
             msg = u"Action={0}, state={1} duration={2:.02f}, " \
@@ -577,9 +618,11 @@ class CallbackModule(CallbackBase):
                     result['state'],
                     duration/1000,  # MS to Sec
                     result['changed'],
-                    result['task'].get_name()
+                    result['name']
                   )
             self._display.display(msg)
+
+        playbook_name = PurePosixPath(self.playbook_name).name
 
         if self.influxdb_client:
             rescued = 0
@@ -591,7 +634,7 @@ class CallbackModule(CallbackBase):
                 measurement=self.measurement_name,
                 tags=dict(
                     action='playbook_summary',
-                    name=PurePosixPath(self.playbook_name).name,
+                    name=playbook_name,
                     result_str=rc_str_struct[playbook_rc],
                     environment=self.environment
                 ),
@@ -607,6 +650,42 @@ class CallbackModule(CallbackBase):
                 )
             )]
             self._write_data_to_influx(data)
+
+            try:
+                if self._metrics:
+                    data = []
+                    for name, metric in self._metrics.items():
+                        for az, vals in metric.items():
+                            dt = dict(
+                                measurement='apimon.' + name,
+                                tags=dict(
+                                    az=az,
+                                    environment=self.environment,
+                                    scenario=playbook_name,
+                                    result_str=rc_str_struct[vals.get('rc',
+                                                                      -1)]
+                                ),
+                                fields=dict(
+                                    duration=int(vals.get('duration', -1)),
+                                    result=int(vals.get('rc', -1)),
+                                    attempted=1
+                                )
+                            )
+                            if vals['rc'] == 0:
+                                dt['fields']['passed'] = 1
+                            elif vals['rc'] == 1:
+                                dt['fields']['skipped'] = 1
+                            elif vals['rc'] == 2:
+                                dt['fields']['failed_ignored'] = 1
+                            elif vals['rc'] == 3:
+                                dt['fields']['failed'] = 1
+                            data.append(dt)
+                    if data:
+                        self._write_data_to_influx(data)
+
+            except Exception as e:
+                self._display.warning('Error emmiting additional metrics: %s' %
+                                      e)
 
         self._display.display(
             'Overall duration of APImon tasks in playbook %s is: %s s' %
