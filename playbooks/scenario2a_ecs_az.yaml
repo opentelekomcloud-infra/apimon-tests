@@ -47,11 +47,12 @@
           remote_ip_prefix: 0.0.0.0/0
 
       - name: Get network facts
-        os_networks_facts:
+        os_networks_info:
           name: "{{ test_network_name }}"
+        register: networks
 
       - set_fact:
-          network_azs: "{{ openstack_networks[0]['availability_zones'] }}"
+          network_azs: "{{ networks[0]['availability_zones'] }}"
 
       - name: "Create server in {{item}}"
         include_role:
