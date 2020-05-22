@@ -43,6 +43,7 @@
             state: present
             display_name: "{{snapshot_name}}"
             volume: "{{volume_name}}"
+          tags: ["metric=create_volume_snapshot"]
 
         - name: List Backups
           script: list_backups.py
@@ -50,11 +51,15 @@
 
         - name: Create backup
           script: "create_backup.py {{volume_name}} {{snapshot_name}} {{backup_name}}"
-          tags: 'service=block_storage'
+          tags:
+            - "service=block_storage"
+            - "metric=create_volume_backup"
 
         - name: Restore backup
           script: "restore_backup.py {{backup_name}} {{volume_name}} {{ (volume_name + 'new') }}"
-          tags: 'service=block_storage'
+          tags:
+            - "service=block_storage"
+            - "metric=restore_volume_backup"
 
         - name: Modify snapshot
           script: "modify_snapshot.py {{snapshot_name}} {{ (snapshot_name + '_new') }}"
@@ -81,27 +86,35 @@
 
       always:
         # If we failed - cleanup what we can
-        - name: Delete backup
-          script: "delete_backup.py {{backup_name}}"
-          tags: 'service=block_storage'
+        - block:
           ignore_errors: True
+            - name: Delete backup
+              script: "delete_backup.py {{backup_name}}"
+              tags:
+                - "service=block_storage"
+                - "metric=delete_volume_backup"
 
-        - name: Delete original snapshot
-          os_volume_snapshot:
-            state: absent
-            display_name: "{{ snapshot_name }}"
-            volume: "{{volume_name}}"
-          ignore_errors: True
+            - name: Delete original snapshot
+              os_volume_snapshot:
+                state: absent
+                display_name: "{{ snapshot_name }}"
+                volume: "{{volume_name}}"
+              tags:
+                - "metric=delete_volume_snapshot"
 
-        - name: Delete new snapshot
-          os_volume_snapshot:
-            state: absent
-            display_name: "{{ (snapshot_name + '_new') }}"
-            volume: "{{volume_name}}"
-          ignore_errors: True
+            - name: Delete new snapshot
+              os_volume_snapshot:
+                state: absent
+                display_name: "{{ (snapshot_name + '_new') }}"
+                volume: "{{volume_name}}"
 
-        - name: Delete Volume
-          os_volume:
-            state: absent
-            display_name: "{{volume_name}}"
-          ignore_errors: True
+              # NOTE(gtema): metrics with same name will me merged together,
+              # therefore pick the deletion of only single snapshot
+
+            - name: Delete Volume
+              os_volume:
+                state: absent
+                display_name: "{{volume_name}}"
+              tags:
+                - "metric=delete_volume"
+
