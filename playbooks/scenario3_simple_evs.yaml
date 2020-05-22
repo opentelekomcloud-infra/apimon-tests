@@ -87,7 +87,6 @@
       always:
         # If we failed - cleanup what we can
         - block:
-          ignore_errors: True
             - name: Delete backup
               script: "delete_backup.py {{backup_name}}"
               tags:
@@ -117,4 +116,4 @@
                 display_name: "{{volume_name}}"
               tags:
                 - "metric=delete_volume"
-
+          ignore_errors: True
