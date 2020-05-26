@@ -31,18 +31,21 @@
 
       - name: Download cirros image
         get_url:
-          url: http://download.cirros-cloud.net/0.4.0/cirros-0.4.0-x86_64-disk.img
+          url: https://download.cirros-cloud.net/0.5.0/cirros-0.5.0-x86_64-disk.img
           dest: /tmp/ansible/images/cirros.img
+          validate_certs: false
 
-          #      - name: Upload cirros image
-          #        os_image:
-          #          name: cirros
-          #          container_format: bare
-          #          disk_format: qcow2
-          #          state: present
-          #          min_disk: 1
-          #          timeout: 300
-          #          filename: /tmp/ansible/images/cirros.img
+      - name: Upload cirros image
+        os_image:
+          name: cirros
+          container_format: bare
+          disk_format: qcow2
+          state: present
+          min_disk: 1
+          timeout: 1200
+          filename: /tmp/ansible/images/cirros.img
+        tags:
+          - "metric=image_upload"
 
       always:
 
@@ -50,3 +53,5 @@
           os_image:
             name: cirros
             state: absent
+          tags:
+            - "metric=image_delete"
