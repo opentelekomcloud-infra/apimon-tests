@@ -24,7 +24,7 @@
   
   - name: get server info
     os_server_info:
-      name: "{{ server_fqdn }}"
+      server: "{{ server_fqdn }}"
     register: server
     tags:
       - "metric=create_server"
