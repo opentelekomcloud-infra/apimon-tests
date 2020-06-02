@@ -23,13 +23,14 @@
       - "metric=create_server"
   
   - name: get server info
-    os_server_facts:
-      server: "{{ server_fqdn }}"
+    os_server_info:
+      name: "{{ server_fqdn }}"
+    register: server
     tags:
       - "metric=create_server"
   
   - set_fact:
-      server_ip: "{{ openstack_servers[0]['public_v4'] }}"
+      server_ip: "{{ server['openstack_servers'][0]['public_v4'] }}"
     tags: 
       - "metric=create_server"
   
@@ -47,22 +48,15 @@
     command: "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' linux@{{server_ip}} -i ~/.ssh/{{server_keypair_name}}.pem"
     tags: ["az={{availability_zone}}", "service=compute", "metric=create_server"]
   
-  - name: Delete server from {{ availability_zone }}
-    os_server:
-      state: absent
-      name: "{{ server_fqdn }}"
-      delete_fip: True
-    tags: ["metric=delete_server"]
-
-  rescue:
+  always:
     - name: Debug server info
       debug:
         var: server
         
-    - name: Delete server
+    - name: Delete serverr from {{ availability_zone }}
       os_server:
         state: absent
         name: "{{ server_fqdn }}"
         delete_fip: True
-
+      tags: ["metric=delete_server"]
 
