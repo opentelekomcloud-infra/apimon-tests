@@ -410,7 +410,10 @@ class CallbackModule(CallbackBase):
             if (isinstance(invoked_args, dict)
                     and 'module_args' in invoked_args):
                 module_args = invoked_args.get('module_args')
-                if 'availability_zone' in module_args:
+                if (
+                    'availability_zone' in module_args
+                    and module_args['availability_zone']
+                ):
                     attrs['az'] = module_args['availability_zone']
                     if not attrs['az']:
                         attrs['az'] = 'default'

@@ -15,24 +15,31 @@
     tags:
       - "metric=create_server"
     register: server
+
+  - name: get server id
+    set_fact:
+      server_id: "{{ server.id }}"
   
   - name: Attach FIP
     os_floating_ip:
-      server: "{{ server_fqdn }}"
+      server: "{{ server_id }}"
     tags:
       - "metric=create_server"
+      - "az={{ availability_zone }}"
   
   - name: get server info
     os_server_info:
-      server: "{{ server_fqdn }}"
+      server: "{{ server_id }}"
     register: server
     tags:
       - "metric=create_server"
+      - "az={{ availability_zone }}"
   
   - set_fact:
       server_ip: "{{ server['openstack_servers'][0]['public_v4'] }}"
     tags: 
       - "metric=create_server"
+      - "az={{ availability_zone }}"
   
   # Wait for the server to really start and become accessible
   - name: Wait for SSH port to become active
@@ -53,10 +60,9 @@
       debug:
         var: server
         
-    - name: Delete serverr from {{ availability_zone }}
+    - name: Delete server from {{ availability_zone }}
       os_server:
         state: absent
-        name: "{{ server_fqdn }}"
+        name: "{{ server_id }}"
         delete_fip: True
       tags: ["metric=delete_server"]
-
