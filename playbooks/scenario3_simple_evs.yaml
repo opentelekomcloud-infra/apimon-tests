@@ -5,10 +5,6 @@
   vars:
     prefix: scenario3-
   tasks:
-    - name: Check volume endpoint
-      script: check_volume_ep.py
-      tags: 'service=block_storage'
-
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
 
