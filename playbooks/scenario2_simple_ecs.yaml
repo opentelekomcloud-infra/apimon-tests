@@ -5,10 +5,6 @@
   vars:
     prefix: scenario2-
   tasks:
-    - name: Check compute endpoint
-      script: check_compute_ep.py
-      tags: 'service=compute'
-
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
 
@@ -16,6 +12,9 @@
         test_server_fqdn: "{{ (prefix + '.host') }}"
         test_security_group_name: "{{ (prefix + '-sg') }}"
         test_keypair_name: "{{ (prefix + '-kp') }}"
+        test_network_name: "{{ ( prefix + '-net') }}"
+        test_image: Standard_Fedora_30_latest
+        test_flavor: s2.medium.2
 
     - debug:
         msg: "Using prefix {{ prefix }}"
@@ -52,6 +51,7 @@
         include_role:
           name: opentelekomcloud.vpc
         vars:
+          network_name: "{{ test_network_name }}"
           state: "present"
 
       - name: List SecurityGroups with Rules
@@ -67,8 +67,8 @@
         os_security_group_rule:
           security_group: "{{ test_security_group_name }}"
           protocol: tcp
-          port_range_min: 2208
-          port_range_max: 2209
+          port_range_min: 22
+          port_range_max: 22
           remote_ip_prefix: 0.0.0.0/0
 
       - name: List Images
@@ -80,21 +80,68 @@
       - name: List Servers
         os_server_info:
 
-      - name: Create Server with all required resources
-        include_role:
-          name: opentelekomcloud.bastion
-        vars:
-          server_keypair_name: "{{ test_keypair_name }}"
-          server_fqdn: "{{ test_server_fqdn }}"
-          state: "present"
+      ############
+      - name: Create Server in default AZ
+        os_server:
+          auto_ip: false
+          name: "{{ test_server_fqdn }}"
+          image: "{{ test_image }}"
+          flavor: "{{ test_flavor }}"
+          key_name: "{{ test_keypair_name }}"
+          network: "{{ test_network_name }}"
+          security_groups: "{{ test_security_group_name }}"
+        tags:
+          - "metric=create_server"
+          - "az=default"
+        register: server
 
+      - name: get server id
+        set_fact:
+          server_id: "{{ server.id }}"
+
+      - name: Attach FIP
+        os_floating_ip:
+          server: "{{ server_id }}"
+        tags:
+          - "metric=create_server"
+          - "az=default"
+
+      - name: get server info
+        os_server_info:
+          server: "{{ server_id }}"
+        register: server
+        tags:
+          - "metric=create_server"
+          - "az=default"
+
+      - set_fact:
+          server_ip: "{{ server['openstack_servers'][0]['public_v4'] }}"
+        tags:
+          - "metric=create_server"
+          - "az=default"
+
+      # Wait for the server to really start and become accessible
+      - name: Wait for SSH port to become active
+        wait_for:
+          port: 22
+          host: "{{ server_ip }}"
+          timeout: 600
+        tags: ["az=default", "service=compute", "metric=create_server"]
+
+      - name: Try connecting
+        retries: 10
+        delay: 1
+        command: "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' linux@{{server_ip}} -i ~/.ssh/{{test_keypair_name}}.pem"
+        tags: ["az=default", "service=compute", "metric=create_server"]
+
+      ############
       - name: Get Server metadata
         script: "get_server_metadata.py {{ test_server_fqdn }}"
         tags: 'service=compute'
 
       - name: Modify metadata
         os_server_metadata:
-          name: "{{ test_server_fqdn }}"
+          name: "{{ server_id }}"
           state: present
           meta:
             meta_k1: v1
@@ -102,7 +149,7 @@
 
       - name: Delete metadata
         os_server_metadata:
-          name: "{{ test_server_fqdn }}"
+          name: "{{ server_id }}"
           state: absent
           meta:
             meta_k1:
@@ -110,7 +157,7 @@
 
       - name: Set Tags on the Server
         os_tag:
-          server: "{{ test_server_fqdn }}"
+          server: "{{ server_id }}"
           state: present
           tags:
             - tag1
@@ -128,12 +175,12 @@
 
       always:
         - block:
-            - name: Cleanup Server with all required resources
-              include_role:
-                name: opentelekomcloud.bastion
-              vars:
-                state: "absent"
-                server_fqdn: "{{ test_server_fqdn }}"
+            - name: Delete server
+              os_server:
+                state: absent
+                name: "{{ server_id }}"
+                delete_fip: True
+              tags: ["metric=delete_server"]
 
             - name: Delete SecurityGroup
               os_security_group:
