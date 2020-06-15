@@ -192,6 +192,7 @@
                 name: opentelekomcloud.vpc
               vars:
                 state: absent
+                network_name: "{{ test_network_name }}"
 
             - name: Delete Keypair
               include_role:
