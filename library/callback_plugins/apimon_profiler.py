@@ -1,9 +1,27 @@
 # GNU General Public License v3.0+
 # (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-# Make coding more python3-ish
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
+import collections
+import os
+import re
+import time
+
+from ansible.module_utils._text import to_text
+from ansible.module_utils.six.moves import reduce
+from ansible.plugins.callback import CallbackBase
+
+from pathlib import PurePosixPath
+
+try:
+    import influxdb
+except ImportError:
+    influxdb = None
+
+try:
+    from alertaclient.api import Client as alerta_client
+except ImportError:
+    alerta_client = None
+
 
 DOCUMENTATION = '''
     callback: apimon_profiler
@@ -98,34 +116,13 @@ Playbook run took 0 days, 0 hours, 0 minutes, 2 seconds
 
 '''
 
-import collections
-import logging
-import os
-import re
-import time
-
-from ansible.module_utils.six.moves import reduce
-from ansible.module_utils._text import to_text
-from ansible.plugins.callback import CallbackBase
-
-from pathlib import PurePosixPath
-
-try:
-    import influxdb
-except ImportError:
-    influxdb = None
-
-try:
-    from alertaclient.api import Client as alerta_client
-except ImportError:
-    alerta_client = None
-
 
 # define start time
 t0 = tn = time.time_ns()
 te = 0
 
 rc_str_struct = {
+    -1: 'Undefined',
     0: 'Passed',
     1: 'Skipped',
     2: 'FailedIgnored',
@@ -171,7 +168,8 @@ def tasktime():
 
 
 class CallbackModule(CallbackBase):
-    """
+    """Callback ansible module
+
     This callback module processes information about each task and report
     individual statistics into influxdb.
     """
@@ -256,6 +254,7 @@ class CallbackModule(CallbackBase):
         self.current = None
         self.playbook_name = None
         self.influxdb_client = None
+        self._metrics = collections.OrderedDict()
 
         super(CallbackModule, self).__init__()
 
@@ -299,7 +298,7 @@ class CallbackModule(CallbackBase):
         self.use_last_name_segment = self.get_option('use_last_name_segment')
 
         self.job_id = os.getenv('TASK_EXECUTOR_JOB_ID')
-        self.environment = os.getenv('APIMON_PROFILER_ALERTA_ENV',
+        self.environment = os.getenv('APIMON_PROFILER_ENVIRONMENT',
                                      'Production')
         self.customer = os.getenv('APIMON_PROFILER_ALERTA_CUSTOMER')
         self.origin = os.getenv('APIMON_PROFILER_ORIGIN')
@@ -354,10 +353,11 @@ class CallbackModule(CallbackBase):
                 'action': action,
                 'task': task,
                 'play': task._parent._play.get_name(),
-                'state': task.args.get('state')
+                'state': to_text(task.args.get('state'))
             }
             az = task.args.get('availability_zone')
             service = None
+            metrics = []
 
             for tag in task.tags:
                 # Look for tags on interesting tags
@@ -365,6 +365,8 @@ class CallbackModule(CallbackBase):
                     az = tag[3:]
                 if tag.startswith('service='):
                     service = tag[8:]
+                if tag.startswith('metric='):
+                    metrics.append(to_text(tag[7:]))
 
             if not service and action in self.ACTION_SERVICE_MAP:
                 service = self.ACTION_SERVICE_MAP[action]
@@ -382,6 +384,8 @@ class CallbackModule(CallbackBase):
                 stat_args['az'] = to_text(az)
             if service:
                 stat_args['service'] = to_text(service)
+            if metrics:
+                stat_args['metrics'] = metrics
 
             self.stats[self.current] = stat_args
             if self._display.verbosity >= 2:
@@ -389,13 +393,16 @@ class CallbackModule(CallbackBase):
         else:
             self.current = None
 
-    def _update_task_stats(self, result, rc):
+    def _update_task_stats(self, result, rc) -> None:
         if self.current is not None:
             duration = time.time_ns() - self.stats[self.current]['start']
+            # NS to MS
+            duration = int(duration / 1000000)
 
             invoked_args = result._result.get('invocation')
+
             attrs = {
-                'changed': result._result['changed'],
+                'changed': result._result.get('changed', 'False'),
                 'end': time.time_ns(),
                 'duration': duration,
                 'rc': rc
@@ -403,17 +410,28 @@ class CallbackModule(CallbackBase):
             if (isinstance(invoked_args, dict)
                     and 'module_args' in invoked_args):
                 module_args = invoked_args.get('module_args')
-                if 'availability_zone' in module_args:
-                    attrs['az'] = module_args.get('availability_zone')
+                if (
+                    'availability_zone' in module_args
+                    and module_args['availability_zone']
+                ):
+                    attrs['az'] = module_args['availability_zone']
+                    if not attrs['az']:
+                        attrs['az'] = 'default'
+                if 'state' in module_args:
+                    attrs['state'] = module_args.get('state')
                 if rc == 3:
                     msg = None
                     if 'msg' in result._result:
                         msg = result._result['msg']
                     attrs['raw_response'] = msg
-                    attrs['anonymized_response'] = \
-                        self._anonymize_message(attrs['raw_response'])
-                    attrs['error_category'] = self._get_message_error_category(
-                        attrs['anonymized_response'])
+                    try:
+                        attrs['anonymized_response'] = \
+                            self._anonymize_message(attrs['raw_response'])
+                        attrs['error_category'] = \
+                            self._get_message_error_category(
+                            attrs['anonymized_response'])
+                    except Exception:
+                        pass
             else:
                 if rc == 3:
                     msg = None
@@ -422,12 +440,44 @@ class CallbackModule(CallbackBase):
                     elif 'module_stderr' in result._result:
                         msg = result._result['module_stderr'].splitlines()[-1]
                     attrs['raw_response'] = msg
-                    attrs['anonymized_response'] = \
-                        self._anonymize_message(attrs['raw_response'])
-                    attrs['error_category'] = self._get_message_error_category(
-                        attrs['anonymized_response'])
+                    try:
+                        attrs['anonymized_response'] = \
+                            self._anonymize_message(attrs['raw_response'])
+                        attrs['error_category'] = \
+                            self._get_message_error_category(
+                            attrs['anonymized_response'])
+                    except Exception:
+                        pass
 
             self.stats[self.current].update(attrs)
+
+            try:
+                if 'metrics' in self.stats[self.current]:
+                    az = attrs.get('az')
+                    if not az and 'az' in self.stats[self.current]:
+                        az = self.stats[self.current]['az']
+                    for metric_name in self.stats[self.current]['metrics']:
+
+                        if metric_name not in self._metrics:
+                            self._metrics[metric_name] = {}
+                        metric_obj = self._metrics[metric_name]
+                        metric = None
+                        if 'az':
+                            metric = metric_obj.get(az, {})
+                        if not metric:
+                            metric = {}
+
+                        metric_attrs = {
+                            'duration': metric.get('duration', 0) + duration,
+                            'rc': rc
+                        }
+                        if az:
+                            metric_obj[az] = metric_attrs
+                        else:
+                            metric_obj = metric_attrs
+                        self._metrics[metric_name] = metric_obj
+            except Exception as e:
+                self._display.error('Error trying to update metrics: %s' % e)
 
             if rc == 3:
                 self._send_alert_to_alerta(
@@ -459,7 +509,7 @@ class CallbackModule(CallbackBase):
             result_str=rc_str_struct[rc],
         )
         fields = dict(
-            duration=int(duration / 1000000),
+            duration=int(duration),
             result_code=int(rc)
         )
         if 'az' in task_data:
@@ -491,13 +541,16 @@ class CallbackModule(CallbackBase):
         except Exception as e:
             self._display.warning('Profiler: Error writing data to'
                                   'influxdb: %s' % e)
-            self._send_alert_to_alerta(
-                resource='apimon_profile',
-                event='InfluxWriteError',
-                value=e.to_str(),
-                service=['apimon', 'profiler'],
-                severity='major'
-            )
+            try:
+                self._send_alert_to_alerta(
+                    resource='apimon_profile',
+                    event='InfluxWriteError',
+                    value=str(e),
+                    service=['apimon', 'profiler'],
+                    severity='major'
+                )
+            except Exception:
+                self._display.warning('Error raising alert')
 
     def _prepare_alert_data(self, data):
         link = os.getenv(
@@ -551,17 +604,6 @@ class CallbackModule(CallbackBase):
             self._display.error(
                  'Profiler: Error sending alert to alerta: %s' % e)
 
-    def _send_heartbeat_to_alerta(self):
-        try:
-            if self.alerta:
-                self.alerta.heartbeat(
-                    origin='apimon_callback' + self.environment,
-                    tags=['apimon_profiler']
-                )
-        except Exception as e:
-            self._display.error(
-                 'Profiler: Error sending Heartbeat to alerta: %s' % e)
-
     def v2_playbook_on_stats(self, stats):
         global te, t0
 
@@ -570,6 +612,8 @@ class CallbackModule(CallbackBase):
         self._display.display(filled("", fchar="="))
 
         results = self.stats.items()
+
+        self._display.vvv('Metrics to be emitted are: %s' % self._metrics)
         overall_apimon_duration = 0
         rcs = {
             0: 0,
@@ -580,7 +624,7 @@ class CallbackModule(CallbackBase):
 
         # Print the timings
         for uuid, result in results:
-            duration = result['duration'] / 1000000
+            duration = result['duration']
             overall_apimon_duration = overall_apimon_duration + duration
             rcs.update({result['rc']: rcs[result['rc']] + 1})
             msg = u"Action={0}, state={1} duration={2:.02f}, " \
@@ -589,37 +633,61 @@ class CallbackModule(CallbackBase):
                     result['state'],
                     duration/1000,  # MS to Sec
                     result['changed'],
-                    result['task'].get_name()
+                    result['name']
                   )
             self._display.display(msg)
 
+        playbook_name = PurePosixPath(self.playbook_name).name
+
         if self.influxdb_client:
-            rescued = 0
-            for (host, val) in stats.rescued.items():
-                if val:
-                    rescued += val
-            playbook_rc = 0 if (rcs[3] == 0 and rescued == 0) else 3
-            data = [dict(
-                measurement=self.measurement_name,
-                tags=dict(
-                    action='playbook_summary',
-                    name=PurePosixPath(self.playbook_name).name,
-                    result_str=rc_str_struct[playbook_rc],
-                    environment=self.environment
-                ),
-                fields=dict(
-                    duration=int((te-t0)/1000000),
-                    apimon_duration=int(overall_apimon_duration),
-                    amount_passed=int(rcs[0]),
-                    amount_skipped=int(rcs[1]),
-                    amount_failed=int(rcs[2]),
-                    amount_failed_ignored=int(rcs[3]),
-                    result_code=int(playbook_rc),
-                    job_id=self.job_id
-                )
-            )]
-            self._write_data_to_influx(data)
-        self._send_heartbeat_to_alerta()
+            try:
+                rescued = 0
+                for (host, val) in stats.rescued.items():
+                    if val:
+                        rescued += val
+                playbook_rc = 0 if (rcs[3] == 0 and rescued == 0) else 3
+                data = [dict(
+                    measurement=self.measurement_name,
+                    tags=dict(
+                        action='playbook_summary',
+                        name=playbook_name,
+                        result_str=rc_str_struct[playbook_rc],
+                        environment=self.environment
+                    ),
+                    fields=dict(
+                        duration=int((te-t0)/1000000),
+                        apimon_duration=int(overall_apimon_duration),
+                        amount_passed=int(rcs[0]),
+                        amount_skipped=int(rcs[1]),
+                        amount_failed=int(rcs[2]),
+                        amount_failed_ignored=int(rcs[3]),
+                        result_code=int(playbook_rc),
+                        job_id=self.job_id
+                    )
+                )]
+                self._write_data_to_influx(data)
+            except Exception as e:
+                self._display.error('Error sending metrics: %s' % e)
+
+            try:
+                if self._metrics:
+                    data = []
+                    for name, metric in self._metrics.items():
+                        if 'rc' not in metric:
+                            for az, vals in metric.items():
+                                data.append(self._get_metric_data(
+                                    name, vals,
+                                    playbook_name=playbook_name, az=az))
+                        else:
+                            data.append(self._get_metric_data(
+                                name, metric,
+                                playbook_name=playbook_name))
+                    if data:
+                        self._write_data_to_influx(data)
+
+            except Exception as e:
+                self._display.warning('Error emitting additional metrics: %s' %
+                                      e)
 
         self._display.display(
             'Overall duration of APImon tasks in playbook %s is: %s s' %
@@ -658,7 +726,35 @@ class CallbackModule(CallbackBase):
 
         return result if result else msg
 
-    def _anonymize_message(self, msg):
+    def _get_metric_data(self, name: str,
+                         vals: dict, **kwargs) -> dict:
+        tags = dict(
+            environment=self.environment,
+            result_str=rc_str_struct[vals.get('rc', -1)]
+        )
+        for k, v in kwargs.items():
+            tags[k] = v
+
+        dt = dict(
+            measurement='apimon.' + name,
+            tags=tags,
+            fields=dict(
+                duration=int(vals.get('duration', -1)),
+                result=int(vals.get('rc', -1)),
+                attempted=1
+            )
+        )
+        if vals['rc'] == 0:
+            dt['fields']['passed'] = 1
+        elif vals['rc'] == 1:
+            dt['fields']['skipped'] = 1
+        elif vals['rc'] == 2:
+            dt['fields']['failed_ignored'] = 1
+        elif vals['rc'] == 3:
+            dt['fields']['failed'] = 1
+        return dt
+
+    def _anonymize_message(self, msg: str) -> str:
         # Anonymize remaining part
         # Project_id
         result = msg

@@ -6,12 +6,10 @@
     prefix: test-scenario16-
     stack_name: "{{ (prefix + 'test_stack_apimon') }}"
   tasks:
-    - name: Check orchestration endpoint
-      script: check_orchestration_ep.py
-
     - name: Get The Public Network
-      os_networks_facts:
+      os_networks_info:
         name:  admin_external_net
+      register: nets
 
     - name: Delete Stack
       os_stack:
@@ -30,7 +28,7 @@
           template: "files/scenario16_stack_template.yaml"
           name: "{{ stack_name }}"
           parameters:
-            public_net_id: "{{ ansible_facts['openstack_networks'][0]['id'] }}"
+            public_net_id: "{{ nets['openstack_networks'][0]['id'] }}"
 
       - name: Query Stack
         os_stack_facts:
@@ -43,14 +41,9 @@
           name: "{{ stack_name }}"
           parameters:
             image: Standard_Debian_9_latest
-            public_net_id: "{{ ansible_facts['openstack_networks'][0]['id'] }}"
+            public_net_id: "{{ nets['openstack_networks'][0]['id'] }}"
 
-      - name: Delete Stack
-        os_stack:
-          name: "{{ stack_name }}"
-          state: absent
-
-      rescue:
+      always:
         - name: Delete stack
           os_stack:
             name: "{{ stack_name }}"

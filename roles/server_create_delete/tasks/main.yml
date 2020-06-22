@@ -2,7 +2,7 @@
 # tasks file for roles/server_create_delete
 
 - block:
-  - name: Create Server
+  - name: Create Server in {{ availability_zone }}
     os_server:
       auto_ip: false
       availability_zone: "{{ availability_zone | default(omit) }}"
@@ -12,18 +12,34 @@
       key_name: "{{ server_keypair_name }}"
       network: "{{ server_net }}"
       security_groups: "{{ security_group }}"
+    tags:
+      - "metric=create_server"
     register: server
+
+  - name: get server id
+    set_fact:
+      server_id: "{{ server.id }}"
   
   - name: Attach FIP
     os_floating_ip:
-      server: "{{ server_fqdn }}"
+      server: "{{ server_id }}"
+    tags:
+      - "metric=create_server"
+      - "az={{ availability_zone }}"
   
   - name: get server info
-    os_server_facts:
-      server: "{{ server_fqdn }}"
+    os_server_info:
+      server: "{{ server_id }}"
+    register: server
+    tags:
+      - "metric=create_server"
+      - "az={{ availability_zone }}"
   
   - set_fact:
-      server_ip: "{{ openstack_servers[0]['public_v4'] }}"
+      server_ip: "{{ server['openstack_servers'][0]['public_v4'] }}"
+    tags: 
+      - "metric=create_server"
+      - "az={{ availability_zone }}"
   
   # Wait for the server to really start and become accessible
   - name: Wait for SSH port to become active
@@ -31,29 +47,22 @@
       port: 22
       host: "{{ server_ip }}"
       timeout: 600
-    tags: ["az={{availability_zone}}", "service=compute"]
+    tags: ["az={{availability_zone}}", "service=compute", "metric=create_server"]
   
   - name: Try connecting
     retries: 10
     delay: 1
     command: "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' linux@{{server_ip}} -i ~/.ssh/{{server_keypair_name}}.pem"
-    tags: ["az={{availability_zone}}", "service=compute"]
+    tags: ["az={{availability_zone}}", "service=compute", "metric=create_server"]
   
-  - name: Delete server
-    os_server:
-      state: absent
-      name: "{{ server_fqdn }}"
-      delete_fip: True
-
-  rescue:
+  always:
     - name: Debug server info
       debug:
         var: server
         
-    - name: Delete server
+    - name: Delete server from {{ availability_zone }}
       os_server:
         state: absent
-        name: "{{ server_fqdn }}"
+        name: "{{ server_id }}"
         delete_fip: True
-
-
+      tags: ["metric=delete_server"]
