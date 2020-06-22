@@ -9,6 +9,8 @@
   tasks:
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+    - set_fact:
+        image_name: "{{ (prefix + '-test_image_apimon') }}"
 
     - block:
 
@@ -33,7 +35,7 @@
 
       - name: Upload cirros image
         os_image:
-          name: cirros
+          name: "{{ image_name }}"
           container_format: bare
           disk_format: qcow2
           state: present
@@ -47,7 +49,7 @@
 
         - name: Delete cirros image
           os_image:
-            name: cirros
+            name: "{{ image_name }}"
             state: absent
           tags:
             - "metric=image_delete"
