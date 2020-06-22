@@ -2,6 +2,8 @@
 
 - name: Scenario 3 - Backup per AZ
   hosts: localhost
+  collections:
+    - opentelekomcloud.cloud
   vars:
     prefix: scenario3b-
   tasks:
@@ -24,7 +26,6 @@
 
         - name: "Create Volume in {{item}}"
           os_volume:
-            state: present
             availability_zone: "{{ item }}"
             size: 10
             display_name: "{{ (item + '.' + volume_suffix) }}"
@@ -32,17 +33,15 @@
 
         - name: "Create Snapshot in {{item}}"
           os_volume_snapshot:
-            state: present
             display_name: "{{ (item + '.' + snapshot_suffix) }}"
             volume: "{{ (item + '.' + volume_suffix) }}"
           loop: "{{ network_azs }}"
 
         - name: "Create Backup in {{item}}"
-          vars:
-            volume_name: "{{ (item + '.' + volume_suffix) }}"
-            snapshot_name: "{{ (item + '.' + snapshot_suffix) }}"
-            backup_name: "{{ (item + '.' + backup_suffix) }}"
-          script: "create_backup.py {{volume_name}} {{snapshot_name}} {{backup_name}}"
+          volume_backup:
+            volume: "{{ (item + '.' + volume_suffix) }}"
+            snapshot: "{{ (item + '.' + snapshot_suffix) }}"
+            display_name: "{{ (item + '.' + backup_suffix) }}"
           tags: 'service=block_storage'
           loop: "{{ network_azs }}"
 
@@ -58,7 +57,7 @@
       rescue:
         - name: "Get info about Backup in {{item}}"
           script: "get_backup_info.py {{ (item + '.' + backup_suffix) }}"
-          register: "{{ ('backup_info_' + item) }}"
+          register: backup
           tags: 'service=block_storage'
           loop: "{{ network_azs }}"
 
@@ -69,7 +68,7 @@
 
         - name: "Get info about Volume in {{item}}"
           script: "get_volume_info.py {{ (item + '.' + volume_suffix) }}"
-          register: "{{ ('volume_info_' + item) }}"
+          register: volume
           tags: 'service=block_storage'
           loop: "{{ network_azs }}"
 
@@ -81,9 +80,9 @@
       always:
         # If we failed - cleanup what we can
         - name: "Delete Backup in {{item}}"
-          vars:
-            backup_name: "{{ (item + '.' + backup_suffix) }}"
-          script: "delete_backup.py {{backup_name}}"
+          volume_backup:
+            display_name: "{{ (item + '.' + backup_suffix) }}"
+            state: absent
           tags: 'service=block_storage'
           ignore_errors: True
           loop: "{{ network_azs }}"
