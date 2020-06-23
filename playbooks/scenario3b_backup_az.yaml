@@ -38,34 +38,17 @@
           loop: "{{ network_azs }}"
 
         - name: "Create Backup in {{item}}"
-          volume_backup:
-            volume: "{{ (item + '.' + volume_suffix) }}"
-            snapshot: "{{ (item + '.' + snapshot_suffix) }}"
-            display_name: "{{ (item + '.' + backup_suffix) }}"
-          tags: 'service=block_storage'
-          loop: "{{ network_azs }}"
-
-        - name: "Restore Backup in {{item}}"
+          include_role:
+            name: backup_create_restore_delete
           vars:
             volume_name: "{{ (item + '.' + volume_suffix) }}"
+            new_volume_name: "{{ (volume_name + 'new') }}"
             snapshot_name: "{{ (item + '.' + snapshot_suffix) }}"
             backup_name: "{{ (item + '.' + backup_suffix) }}"
-          script: "restore_backup.py {{backup_name}} {{volume_name}} {{ (volume_name + 'new') }}"
-          tags: 'service=block_storage'
+            availability_zone: "{{ item }}"
           loop: "{{ network_azs }}"
 
       rescue:
-        - name: "Get info about Backup in {{item}}"
-          script: "get_backup_info.py {{ (item + '.' + backup_suffix) }}"
-          register: backup
-          tags: 'service=block_storage'
-          loop: "{{ network_azs }}"
-
-        - name: "Print Backup info in {{item}}"
-          debug:
-            var: "{{ ('backup_info_' + item + '.stdout') }}"
-          loop: "{{ network_azs }}"
-
         - name: "Get info about Volume in {{item}}"
           script: "get_volume_info.py {{ (item + '.' + volume_suffix) }}"
           register: volume
@@ -79,14 +62,6 @@
 
       always:
         # If we failed - cleanup what we can
-        - name: "Delete Backup in {{item}}"
-          volume_backup:
-            display_name: "{{ (item + '.' + backup_suffix) }}"
-            state: absent
-          tags: 'service=block_storage'
-          ignore_errors: True
-          loop: "{{ network_azs }}"
-
         - name: "Delete original Snapshot in {{item}}"
           vars:
             volume_name: "{{ (item + '.' + volume_suffix) }}"

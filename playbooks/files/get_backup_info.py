@@ -8,7 +8,14 @@ conn = openstack.connect()
 
 if len(sys.argv) > 1:
     query = sys.argv[1]
+else:
+    query = None
+try:
+    print(json.dumps(conn.block_storage.get_backup(query).to_dict()))
+except:
     for backup in conn.block_storage.backups():
-        if backup.name == query or backup.id == query:
+        if query and backup.name == query:
             print(json.dumps(backup.to_dict()))
-            exit(0)
+        elif not query:
+            print(json.dumps(backup.to_dict()))
+exit(0)
