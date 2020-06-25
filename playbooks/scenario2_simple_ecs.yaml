@@ -190,7 +190,7 @@
             - name: Delete server
               os_server:
                 state: absent
-                name: "{{ server_id }}"
+                name: "{{ server_id | default(test_server_fqdn) }}"
                 delete_fip: True
               tags: ["metric=delete_server"]
 
