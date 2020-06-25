@@ -94,7 +94,7 @@
           - "metric=create_server"
           - "az=default"
         register: server
-
+    
       - name: get server id
         set_fact:
           server_id: "{{ server.id }}"
@@ -119,7 +119,19 @@
         tags:
           - "metric=create_server"
           - "az=default"
-
+          
+      - name: find servers by name
+        os_server_info:
+          server: "{{ test_server_fqdn }}"
+        register: servers
+        tags:
+          - "metric=create_server"
+          - "az=default"
+          
+      - name: Debug server info
+        debug:
+          var: servers
+          
       # Wait for the server to really start and become accessible
       - name: Wait for SSH port to become active
         wait_for:
@@ -136,12 +148,12 @@
 
       ############
       - name: Get Server metadata
-        script: "get_server_metadata.py {{ test_server_fqdn }}"
+        script: "get_server_metadata.py {{ server_id }}"
         tags: 'service=compute'
 
       - name: Modify metadata
         os_server_metadata:
-          name: "{{ server_id }}"
+          server: "{{ server_id }}"
           state: present
           meta:
             meta_k1: v1
@@ -149,7 +161,7 @@
 
       - name: Delete metadata
         os_server_metadata:
-          name: "{{ server_id }}"
+          server: "{{ server_id }}"
           state: absent
           meta:
             meta_k1:
