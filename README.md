@@ -30,7 +30,14 @@ Initially developed as part of the api-monitoring project, but separated for the
   pip install otcextensions
 ```
 
-5. Prepare clouds.yaml configuration. Example (~/.config/openstack/clouds.yaml):
+5. Install additional ansible requirements used in the some scenarios (this step will look different with Ansible 2.10)
+
+```
+  ansible-galaxy collection install -r requirements.txt
+  ansible-galaxy role install -r requirements.txt
+```
+
+6. Prepare clouds.yaml configuration. Example (~/.config/openstack/clouds.yaml):
 
 ```
 clouds:
@@ -44,7 +51,7 @@ clouds:
       password: XXXXXXXX
 ```
 
-6. Execute the chosen scenario
+7. Execute the chosen scenario
 
 ```
   OS_CLOUD=otc ansible-playbook -i inventory/testing playbooks/scenario1_token.yaml -e 'ansible_python_interprether=`which python`'
