@@ -33,8 +33,8 @@ Initially developed as part of the api-monitoring project, but separated for the
 5. Install additional ansible requirements used in the some scenarios (this step will look different with Ansible 2.10)
 
 ```
-  ansible-galaxy collection install -r requirements.txt
-  ansible-galaxy role install -r requirements.txt
+  ansible-galaxy collection install -r requirements.yml
+  ansible-galaxy role install -r requirements.yml
 ```
 
 6. Prepare clouds.yaml configuration. Example (~/.config/openstack/clouds.yaml):
