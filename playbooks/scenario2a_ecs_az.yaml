@@ -73,7 +73,7 @@
           name: server_create_delete
         vars:
           server_keypair_name: "{{ test_keypair_name }}"
-          server_fqdn: "{{ (item + '.' + test_server_fqdn) }}"
+          server_fqdn: "{{ ('az3_s3.' + test_server_fqdn) }}"
           server_image: "{{ test_image }}"
           server_flavor: "{{ test_s3_flavor }}"
           server_net: "{{ test_network_name }}"
