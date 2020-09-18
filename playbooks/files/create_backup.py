@@ -19,6 +19,6 @@ try:
     conn.block_storage.wait_for_status(backup,
                                        status='available',
                                        wait=2400)
-except openstack.exceptions.SDKException as e:
+except Exception as e:
     print(e)
     raise
