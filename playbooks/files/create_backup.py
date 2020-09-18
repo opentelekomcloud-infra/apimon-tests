@@ -11,10 +11,14 @@ snapshots = list(conn.block_storage.snapshots(name=sys.argv[2]))
 snapshot_id = snapshots[0].id
 
 
-backup = conn.block_storage.create_backup(volume_id=volume_id,
-                                          snapshot_id=snapshot_id,
-                                          name=sys.argv[3])
+try:
+    backup = conn.block_storage.create_backup(volume_id=volume_id,
+                                              snapshot_id=snapshot_id,
+                                              name=sys.argv[3])
 
-conn.block_storage.wait_for_status(backup,
-                                   status='available',
-                                   wait=2400)
+    conn.block_storage.wait_for_status(backup,
+                                       status='available',
+                                       wait=2400)
+except openstack.exceptions.SDKException as e:
+    print(e)
+    raise
