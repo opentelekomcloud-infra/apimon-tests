@@ -9,6 +9,7 @@
     prefix: scenario2a-
     test_image: Standard_Fedora_30_latest
     test_flavor: s2.medium.2
+    test_s3_flavor: s3.medium.1
   tasks:
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
@@ -66,6 +67,18 @@
           security_group: "{{ test_security_group_name }}"
           availability_zone: "{{ item }}"
         loop: "{{ network_azs }}"
+
+      - name: "Create s3 instance"
+        include_role:
+          name: server_create_delete
+        vars:
+          server_keypair_name: "{{ test_keypair_name }}"
+          server_fqdn: "{{ (item + '.' + test_server_fqdn) }}"
+          server_image: "{{ test_image }}"
+          server_flavor: "{{ test_s3_flavor }}"
+          server_net: "{{ test_network_name }}"
+          security_group: "{{ test_security_group_name }}"
+          availability_zone: "eu-de-03"
 
       always:
         # do something here
