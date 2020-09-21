@@ -20,5 +20,5 @@ try:
                                        status='available',
                                        wait=2400)
 except Exception as e:
-    print(e)
+    print(e, file=sys.stderr)
     raise
