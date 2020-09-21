@@ -3,12 +3,12 @@
 # Scenario to test ECS service in different AZs
 # A VPC is created and VM is being started in different AZs
 #
-- name: Scenario 2a - Compute per AZ
+- name: Scenario 2b - S3 flavor
   hosts: localhost
   vars:
-    prefix: scenario2a-
+    prefix: scenario2b-
     test_image: Standard_Fedora_30_latest
-    test_flavor: s2.medium.2
+    test_flavor: s3.medium.1
   tasks:
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
@@ -46,26 +46,17 @@
           port_range_max: 22
           remote_ip_prefix: 0.0.0.0/0
 
-      - name: Get network facts
-        os_networks_info:
-          name: "{{ test_network_name }}"
-        register: networks
-
-      - set_fact:
-          network_azs: "{{ networks['openstack_networks'][0]['availability_zones'] }}"
-
-      - name: "Create server in {{item}}"
+      - name: "Create s3 instance"
         include_role:
           name: server_create_delete
         vars:
           server_keypair_name: "{{ test_keypair_name }}"
-          server_fqdn: "{{ (item + '.' + test_server_fqdn) }}"
+          server_fqdn: "{{ ('az3_s3.' + test_server_fqdn) }}"
           server_image: "{{ test_image }}"
           server_flavor: "{{ test_flavor }}"
           server_net: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
-          availability_zone: "{{ item }}"
-        loop: "{{ network_azs }}"
+          availability_zone: "eu-de-03"
 
       always:
         # do something here
