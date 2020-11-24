@@ -17,36 +17,39 @@
         #       script: cleanup_scenario3.py 'scenario3-'
 
     - name: List Volumes
-      script: list_volumes.py
-      tags: 'service=block_storage'
+      openstack.cloud.volume_info:
 
     - name: Rescue block
       block:
 
         - name: Create Volume
-          os_volume:
+          openstack.cloud.volume:
             state: present
             availability_zone: eu-de-01
             size: 10
             display_name: "{{volume_name}}"
 
         - name: List Snapshots
-          script: list_snapshots.py
+          openstack.cloud.volume_snapshot_info:
           tags: 'service=block_storage'
 
         - name: Create snapshot
-          os_volume_snapshot:
+          openstack.cloud.volume_snapshot:
             state: present
             display_name: "{{snapshot_name}}"
             volume: "{{volume_name}}"
           tags: ["metric=create_volume_snapshot"]
 
         - name: List Backups
-          script: list_backups.py
+          openstack.cloud.volume_backup_info:
           tags: 'service=block_storage'
 
         - name: Create backup
-          script: "create_backup.py {{volume_name}} {{snapshot_name}} {{backup_name}}"
+          openstack.cloud.volume_backup:
+            state: "present"
+            display_name: "{{ backup_name }}"
+            volume: "{{ volume_name }}"
+            snapshot: "{{ snapshot_name }}"
           tags:
             - "service=block_storage"
             - "metric=create_volume_backup"
@@ -64,7 +67,8 @@
 
       rescue:
         - name: Get info about backup
-          script: "get_backup_info.py {{ backup_name }}"
+          openstack.cloud.volume_backup_info:
+            name: "{{ backup_name }}"
           register: backup_info
           tags: 'service=block_storage'
 
@@ -73,7 +77,8 @@
             var: backup_info.stdout
 
         - name: Get info about volume
-          script: "get_volume_info.py {{ volume_name }}"
+          openstack.cloud.volume_info:
+            name: "{{ volume_name }}"
           tags: 'service=block_storage'
           register: volume_info
 
@@ -85,13 +90,15 @@
         # If we failed - cleanup what we can
         - block:
             - name: Delete backup
-              script: "delete_backup.py {{backup_name}}"
+              openstack.cloud.volume_backup:
+                state: "absent"
+                display_name: "{{ backup_name }}"
               tags:
                 - "service=block_storage"
                 - "metric=delete_volume_backup"
 
             - name: Delete original snapshot
-              os_volume_snapshot:
+              openstack.cloud.volume_snapshot:
                 state: absent
                 display_name: "{{ snapshot_name }}"
                 volume: "{{volume_name}}"
@@ -99,7 +106,7 @@
                 - "metric=delete_volume_snapshot"
 
             - name: Delete new snapshot
-              os_volume_snapshot:
+              openstack.cloud.volume_snapshot:
                 state: absent
                 display_name: "{{ (snapshot_name + '_new') }}"
                 volume: "{{volume_name}}"
@@ -108,7 +115,7 @@
               # therefore pick the deletion of only single snapshot
 
             - name: Delete Volume
-              os_volume:
+              openstack.cloud.volume:
                 state: absent
                 display_name: "{{volume_name}}"
               tags:

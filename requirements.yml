@@ -8,3 +8,5 @@ roles:
 collections:
   - name: opentelekomcloud.cloud
     version: 0.0.2
+  - name: openstack.cloud
+    version: 1.2.0
