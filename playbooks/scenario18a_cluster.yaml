@@ -1,0 +1,66 @@
+---
+- name: Scenario 18 - empty CCE cluster functionality
+  hosts: localhost
+  vars:
+    prefix: scenario18a-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        test_router_name: "{{ (prefix + '-test_router_apimon') }}"
+        test_subnet_name: "{{ (prefix + '-test_subnet_apimon') }}"
+        test_network_name: "{{ (prefix + '-test_network_apimon') }}"
+        # NOTE: CCE doesn't support "_"
+        test_cluster_name: "{{ ('z-' + prefix + '-cluster') }}"
+        test_cce_flavor: "cce.s1.small"
+        test_cce_container_network_mode: "overlay_l2"
+
+    - block:
+
+      - name: Create VPC (Router + Net + Subnet)
+        include_role:
+          name: opentelekomcloud.vpc
+        vars:
+          router_name: "{{ test_router_name }}"
+          network_name: "{{ test_network_name }}"
+          subnet_name: "{{ test_subnet_name }}"
+          state: present
+          enable_snat: True
+
+      - name: Create CCE Cluster
+        opentelekomcloud.cloud.cce_cluster:
+          state: absent
+          name: "{{ test_cluster_name }}"
+          flavor: "{{ test_cce_flavor }}"
+          description: "APImon test"
+          router: "{{ test_router_name }}"
+          network: "{{ test_network_name }}"
+          container_network_mode: "{{ test_cce_container_network_mode }}"
+        register: cluster
+        tags:
+          - 'service=cce'
+          - 'metric=create_cluster'
+
+      always:
+
+        - block:
+
+          - name: Delete CCE Cluster
+            opentelekomcloud.cloud.cce_cluster:
+              name: "{{ test_cluster_name }}"
+              state: "absent"
+            tags:
+              - 'service_cce'
+              - 'metric=delete_cluster'
+
+          - name: Delete VPC
+            include_role:
+              name: opentelekomcloud.vpc
+            vars:
+              router_name: "{{ test_router_name }}"
+              network_name: "{{ test_network_name }}"
+              subnet_name: "{{ test_subnet_name }}"
+              state: absent
+
+          ignore_errors: true
