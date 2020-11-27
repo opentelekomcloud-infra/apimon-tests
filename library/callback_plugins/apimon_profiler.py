@@ -237,7 +237,27 @@ class CallbackModule(CallbackBase):
         'os_server_facts': 'compute',
         'os_subnets_facts': 'network',
         'os_user_facts': 'identity',
-        'otc_listener': 'loadbalancer',
+        'server': 'compute',
+        'server_info': 'compute',
+        'server_action': 'compute',
+        'server_volume': 'compute',
+        'server_metadata': 'compute',
+        'router': 'network',
+        'router_info': 'network',
+        'network': 'network',
+        'network_info': 'network',
+        'subnet': 'network',
+        'subnet_info': 'network',
+        'security_group': 'network',
+        'security_group_info': 'network',
+        'security_group_rule': 'network',
+        'volume': 'block_storage',
+        'volume_info': 'block_storage',
+        'volume_snapshot': 'block_storage',
+        'volume_snapshot_info': 'block_storage',
+        'volume_backup': 'block_storage',
+        'volume_backup_info': 'block_storage',
+         'otc_listener': 'loadbalancer',
         'otc_loadbalancer': 'loadbalancer',
         'otc_member': 'loadbalancer',
         'otc_pool': 'loadbalancer',
@@ -245,8 +265,11 @@ class CallbackModule(CallbackBase):
         'rds_flavor_info': 'rds',
         'as_config_info': 'as',
         'as_group_info': 'as',
+        'cce_cluster': 'cce',
         'cce_cluster_info': 'cce',
-        'cce_cluster_cert_info': 'cce'
+        'cce_cluster_node': 'cce',
+        'cce_cluster_node_info': 'cce',
+        'cce_cluster_cert_info': 'cce',
     }
 
     def __init__(self):
@@ -312,6 +335,7 @@ class CallbackModule(CallbackBase):
             task.action.startswith('os_')
             or task.action.startswith('otc')
             or task.action.startswith('opentelekomcloud')
+            or task.action.startswith('openstack')
             # This is bad, but what else can we do?
             or task.action[:3] in ['rds', 'cce']
             or task.action in ('script', 'command',
