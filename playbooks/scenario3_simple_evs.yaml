@@ -44,6 +44,16 @@
         - name: Get info about snapshot
           debug:
             var: snapshot
+            
+        - name: Re-fetch info about snapshot
+          openstack.cloud.volume_snapshot_info:
+            name: "{{ snapshot_name }}"
+          register: snapshot_info
+          tags: 'service=block_storage'
+          
+        - assert:
+            that:
+              - snapshot_info.volume_snapshots[0].status == 'available'
 
         - name: List Backups
           openstack.cloud.volume_backup_info:
