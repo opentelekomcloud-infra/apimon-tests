@@ -30,7 +30,7 @@
 
       - name: Create CCE Cluster
         opentelekomcloud.cloud.cce_cluster:
-          state: absent
+          state: present
           name: "{{ test_cluster_name }}"
           flavor: "{{ test_cce_flavor }}"
           description: "APImon test"
