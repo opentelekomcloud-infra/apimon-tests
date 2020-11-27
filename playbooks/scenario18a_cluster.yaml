@@ -41,19 +41,17 @@
         tags:
           - 'service=cce'
           - 'metric=create_cluster'
-
+          
+      - name: Delete CCE Cluster
+        opentelekomcloud.cloud.cce_cluster:
+          name: "{{ test_cluster_name }}"
+          state: "absent"
+        tags:
+          - 'service_cce'
+          - 'metric=delete_cluster'
+        
       always:
-
         - block:
-
-          - name: Delete CCE Cluster
-            opentelekomcloud.cloud.cce_cluster:
-              name: "{{ test_cluster_name }}"
-              state: "absent"
-            tags:
-              - 'service_cce'
-              - 'metric=delete_cluster'
-
           - name: Delete VPC
             include_role:
               name: opentelekomcloud.vpc
@@ -62,5 +60,4 @@
               network_name: "{{ test_network_name }}"
               subnet_name: "{{ test_subnet_name }}"
               state: absent
-
           ignore_errors: true
