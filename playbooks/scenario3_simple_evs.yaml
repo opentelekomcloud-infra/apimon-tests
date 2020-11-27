@@ -25,7 +25,7 @@
         - name: Create Volume
           openstack.cloud.volume:
             state: present
-            availability_zone: eu-de-01
+            #availability_zone: eu-de-01
             size: 10
             display_name: "{{volume_name}}"
 
