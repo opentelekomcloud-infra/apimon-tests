@@ -3,7 +3,7 @@
 
 - block:
   - name: "Create Volume in {{ availability_zone }}"
-    os_volume:
+    openstack.cloud.volume:
       state: present
       availability_zone: "{{ availability_zone | default(omit) }}"
       size: 10
@@ -14,11 +14,9 @@
   
   always:
     - name: "Delete Volume"
-      os_volume:
+      openstack.cloud.volume:
         state: absent
         display_name: "{{volume_name}}"
       tags:
         - "metric=delete_volume"
         - "metric=delete_volume_{{availability_zone}}"
-
-
