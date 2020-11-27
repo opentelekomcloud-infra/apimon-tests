@@ -18,6 +18,7 @@
       cce_cluster_cert_info:
         cluster: "{{ item.id }}"
       loop: "{{ cce.cce_clusters | selectattr('id') | list }}"
+      when: item.status.status == 'Available'
       register: certs
 
     - name: debug certs
