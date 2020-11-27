@@ -38,7 +38,12 @@
             state: present
             display_name: "{{snapshot_name}}"
             volume: "{{volume_name}}"
+          register: snapshot
           tags: ["metric=create_volume_snapshot"]
+          
+        - name: Get info about snapshot
+          debug:
+            var: snapshot
 
         - name: List Backups
           openstack.cloud.volume_backup_info:
@@ -74,8 +79,18 @@
 
         - name: Print backup info
           debug:
-            var: backup_info.stdout
+            var: backup_info
+            
+        - name: Get info about snapshot
+          openstack.cloud.volume_snapshot_info:
+            name: "{{ snapshot_name }}"
+          register: snapshot_info
+          tags: 'service=block_storage'
 
+        - name: Print snapshot info
+          debug:
+            var: snapshot_info
+            
         - name: Get info about volume
           openstack.cloud.volume_info:
             name: "{{ volume_name }}"
@@ -84,7 +99,7 @@
 
         - name: Print volume info
           debug:
-            var: volume_info.stdout
+            var: volume_info
 
       always:
         # If we failed - cleanup what we can
