@@ -65,4 +65,13 @@
         state: absent
         name: "{{ server_id }}"
         delete_fip: True
+      when: server_id is defined
+      tags: ["metric=delete_server"]
+      
+    - name: Backup Delete server from {{ availability_zone }}
+      os_server:
+        state: absent
+        name: "{{ server_fqdn }}"
+        delete_fip: True
+      when: server_id is not defined
       tags: ["metric=delete_server"]
