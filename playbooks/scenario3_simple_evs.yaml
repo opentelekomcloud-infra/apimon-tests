@@ -38,6 +38,7 @@
             state: present
             display_name: "{{snapshot_name}}"
             volume: "{{volume_name}}"
+            timeout: 1800
           register: snapshot
           tags: ["metric=create_volume_snapshot"]
           
@@ -65,6 +66,7 @@
             display_name: "{{ backup_name }}"
             volume: "{{ volume_name }}"
             snapshot: "{{ snapshot_name }}"
+            timeout: 1800
           tags:
             - "service=block_storage"
             - "metric=create_volume_backup"
@@ -118,6 +120,7 @@
               openstack.cloud.volume_backup:
                 state: "absent"
                 display_name: "{{ backup_name }}"
+                timeout: 1800
               tags:
                 - "service=block_storage"
                 - "metric=delete_volume_backup"
@@ -127,6 +130,7 @@
                 state: absent
                 display_name: "{{ snapshot_name }}"
                 volume: "{{volume_name}}"
+                timeout: 1800
               tags:
                 - "metric=delete_volume_snapshot"
 
@@ -135,6 +139,7 @@
                 state: absent
                 display_name: "{{ (snapshot_name + '_new') }}"
                 volume: "{{volume_name}}"
+                timeout: 1800
 
               # NOTE(gtema): metrics with same name will me merged together,
               # therefore pick the deletion of only single snapshot
