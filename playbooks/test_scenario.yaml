@@ -9,10 +9,14 @@
       - name: "some_custom.role: segmt2: real name under role"
         openstack.cloud.networks_info:
           name: "admin_external_net"
+        tags:
+          - "metric=tmp"
         register: nets
 
       - debug:
           var: nets
+        tags:
+          - "metric=tmp"
 
       - wait_for:
           port: 22
