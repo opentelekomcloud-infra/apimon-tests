@@ -7,7 +7,7 @@
 
     - block:
       - name: "some_custom.role: segmt2: real name under role"
-        openstack.cloud.networks_facts:
+        openstack.cloud.networks_info:
           name: "admin_external_net"
         register: nets
 
