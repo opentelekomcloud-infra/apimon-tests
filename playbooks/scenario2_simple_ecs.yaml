@@ -75,7 +75,7 @@
         openstack.cloud.image_info:
 
       - name: List Flavors
-        openstack.cloud.flavor_info:
+        openstack.cloud.compute_flavor_info:
 
       - name: List Servers
         openstack.cloud.server_info:
