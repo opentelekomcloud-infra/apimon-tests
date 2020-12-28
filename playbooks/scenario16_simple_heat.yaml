@@ -7,7 +7,7 @@
     stack_name: "{{ (prefix + 'test_stack_apimon') }}"
   tasks:
     - name: Get The Public Network
-      openstack.cloud.network_info:
+      openstack.cloud.networks_info:
         name:  admin_external_net
       register: nets
 
