@@ -7,23 +7,23 @@
     stack_name: "{{ (prefix + 'test_stack_apimon') }}"
   tasks:
     - name: Get The Public Network
-      os_networks_info:
+      openstack.cloud.network_info:
         name:  admin_external_net
       register: nets
 
     - name: Delete Stack
-      os_stack:
+      openstack.cloud.stack:
         name: "{{ stack_name }}"
         state: absent
 
     - name: Delete orphaned KP
-      os_keypair:
+      openstack.cloud.keypair:
         name: "{{ ( prefix + 'test-keypair-apimon') }}"
         state: absent
 
     - block:
       - name: Create Stack
-        os_stack:
+        openstack.cloud.stack:
           state: present
           template: "files/scenario16_stack_template.yaml"
           name: "{{ stack_name }}"
@@ -31,11 +31,11 @@
             public_net_id: "{{ nets['openstack_networks'][0]['id'] }}"
 
       - name: Query Stack
-        os_stack_facts:
+        openstack.cloud.stack_facts:
           name: "{{ stack_name }}"
 
       - name: Update Stack
-        os_stack:
+        openstack.cloud.stack:
           state: present
           template: "files/scenario16_stack_template.yaml"
           name: "{{ stack_name }}"
@@ -45,7 +45,7 @@
 
       always:
         - name: Delete stack
-          os_stack:
+          openstack.cloud.stack:
             name: "{{ stack_name }}"
             state: absent
           ignore_errors: True

@@ -16,7 +16,7 @@
     - block:
 
       - name: Get network facts
-        os_networks_info:
+        openstack.cloud.networks_info:
           name: admin_external_net
         register: nets
 

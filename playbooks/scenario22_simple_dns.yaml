@@ -18,12 +18,12 @@
     - block:
 
       - name: Create zone
-        os_zone:
+        openstack.cloud.zone:
           name: "{{ zone_name }}"
           state: present
 
       - name: Create recordset
-        os_recordset:
+        openstack.cloud.recordset:
           zone: "{{ zone_name }}"
           state: present
           recordset_type: "A"
@@ -31,7 +31,7 @@
           name: "a1.{{ zone_name }}"
 
       - name: Delete recordset
-        os_recordset:
+        openstack.cloud.recordset:
           zone: "{{ zone_name }}"
           state: absent
           name: "a1.{{ zone_name }}"
@@ -39,6 +39,6 @@
       always:
 
         - name: Delete zone
-          os_zone:
+          openstack.cloud.zone:
             name: "{{ zone_name }}"
             state: absent

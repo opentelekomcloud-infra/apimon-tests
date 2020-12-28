@@ -34,12 +34,12 @@
           network_name: "{{ test_network_name }}"
 
       - name: Create SG
-        os_security_group:
+        openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: "dummy"
 
       - name: Create SG-Rule
-        os_security_group_rule:
+        openstack.cloud.security_group_rule:
           security_group: "{{ test_security_group_name }}"
           protocol: tcp
           port_range_min: 22
@@ -62,7 +62,7 @@
         # do something here
         - block:
             - name: Delete SG
-              os_security_group:
+              openstack.cloud.security_group:
                 name: "{{ test_security_group_name }}"
                 state: absent
 
