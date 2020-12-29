@@ -40,16 +40,16 @@
         register: cluster
         tags:
           - 'service=cce'
-          - 'metric=create_cluster'
-          
+          - 'metric=create_cce_cluster'
+
       - name: Delete CCE Cluster
         opentelekomcloud.cloud.cce_cluster:
           name: "{{ test_cluster_name }}"
           state: "absent"
         tags:
           - 'service_cce'
-          - 'metric=delete_cluster'
-        
+          - 'metric=delete_cce_cluster'
+
       always:
         - block:
           - name: Delete VPC
