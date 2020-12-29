@@ -30,10 +30,10 @@
           parameters:
             public_net_id: "{{ nets['openstack_networks'][0]['id'] }}"
 
-      - name: Query Stack
-        openstack.cloud.stack_info:
-          name: "{{ stack_name }}"
-        register: stack_data
+              #      - name: Query Stack
+              #        openstack.cloud.stack_info:
+              #          name: "{{ stack_name }}"
+              #        register: stack_data
 
       - name: Update Stack
         openstack.cloud.stack:
