@@ -167,14 +167,14 @@
             meta_k1:
             meta_k2:
 
-      - name: Set Tags on the Server
-        opentelekomcloud.cloud.tag:
-          server: "{{ server_id }}"
-          state: present
-          tags:
-            - tag1
-            - tag2
-          mode: set
+              #- name: Set Tags on the Server
+              #  opentelekomcloud.cloud.tag:
+              #    server: "{{ server_id }}"
+              #    state: present
+              #    tags:
+              #      - tag1
+              #      - tag2
+              #    mode: set
 
       - name: Delete SecurityGroupRule
         openstack.cloud.security_group_rule:
