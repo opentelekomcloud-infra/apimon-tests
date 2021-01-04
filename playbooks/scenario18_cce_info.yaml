@@ -18,8 +18,3 @@
       loop: "{{ cce.cce_clusters | selectattr('id') | list }}"
       when: item.status.status == 'Available'
       register: certs
-
-    - name: debug certs
-      debug:
-        msg: "{{ item.cce_cluster_certs }}"
-      loop: "{{ certs.results }}"
