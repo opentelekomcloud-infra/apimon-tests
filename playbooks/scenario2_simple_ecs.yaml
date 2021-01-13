@@ -28,24 +28,24 @@
         path: "~/.ssh"
         state: directory
 
-    - name: Create Keypair
-      include_role:
-        name: opentelekomcloud.keypair
-      vars:
-        keypair_name: "{{ test_keypair_name }}"
-        state: "present"
-
-    - name: List Networks
-      os_networks_info:
-
-    - name: List Subnets
-      os_subnets_info:
-
-    - name: List Routers
-      script: list_routers.py
-      tags: 'service=network'
-
     - block:
+
+      - name: Create Keypair
+        include_role:
+          name: opentelekomcloud.keypair
+        vars:
+          keypair_name: "{{ test_keypair_name }}"
+          state: "present"
+
+      - name: List Networks
+        os_networks_info:
+
+      - name: List Subnets
+        os_subnets_info:
+
+      - name: List Routers
+        script: list_routers.py
+        tags: 'service=network'
 
       - name: Create VPC (Router + Net + Subnet)
         include_role:
@@ -94,7 +94,7 @@
           - "metric=create_server"
           - "az=default"
         register: server
-    
+
       - name: get server id
         set_fact:
           server_id: "{{ server.id }}"
@@ -119,7 +119,7 @@
         tags:
           - "metric=create_server"
           - "az=default"
-          
+
       - name: find servers by name
         os_server_info:
           server: "{{ test_server_fqdn }}"
@@ -127,11 +127,11 @@
         tags:
           - "metric=create_server"
           - "az=default"
-          
+
       - name: Debug server info
         debug:
           var: servers
-          
+
       # Wait for the server to really start and become accessible
       - name: Wait for SSH port to become active
         wait_for:
