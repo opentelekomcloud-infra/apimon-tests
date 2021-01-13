@@ -28,24 +28,24 @@
         path: "~/.ssh"
         state: directory
 
-    - name: Create Keypair
-      include_role:
-        name: opentelekomcloud.keypair
-      vars:
-        keypair_name: "{{ test_keypair_name }}"
-        state: "present"
-
-    - name: List Networks
-      openstack.cloud.networks_info:
-
-    - name: List Subnets
-      openstack.cloud.subnets_info:
-
-    - name: List Routers
-      script: list_routers.py
-      tags: 'service=network'
-
     - block:
+
+      - name: Create Keypair
+        include_role:
+          name: opentelekomcloud.keypair
+        vars:
+          keypair_name: "{{ test_keypair_name }}"
+          state: "present"
+
+      - name: List Networks
+        openstack.cloud.networks_info:
+
+      - name: List Subnets
+        openstack.cloud.subnets_info:
+
+      - name: List Routers
+        script: list_routers.py
+        tags: 'service=network'
 
       - name: Create VPC (Router + Net + Subnet)
         include_role:
