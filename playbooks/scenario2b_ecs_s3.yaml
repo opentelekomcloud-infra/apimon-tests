@@ -79,5 +79,5 @@
               vars:
                 keypair_name: "{{ test_keypair_name }}"
                 state: absent
-                force_delete_keypair: true
+                force_delete_key: true
           ignore_errors: true
