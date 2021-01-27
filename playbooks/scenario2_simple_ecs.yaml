@@ -211,6 +211,6 @@
                 name: opentelekomcloud.keypair
               vars:
                 keypair_name: "{{ test_keypair_name }}"
-                force_delete_keypair: true
+                force_delete_keyp : true
                 state: "absent"
           ignore_errors: true
