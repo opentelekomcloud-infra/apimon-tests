@@ -89,4 +89,9 @@
                 keypair_name: "{{ test_keypair_name }}"
                 state: absent
                 force_delete_key: true
+
+            - name: Pause for 5 minutes to give Neutron time
+              pause:
+                minutes: 5
+
           ignore_errors: true
