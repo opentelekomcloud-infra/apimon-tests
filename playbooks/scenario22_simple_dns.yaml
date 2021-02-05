@@ -8,12 +8,12 @@
   tasks:
     - set_fact:
        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
-       zone_name: "{{ prefix }}apimon.tsi.org."
 
     - name: Try dig open-telekom-cloud.com
       set_fact:
         otc_dns: "{{ lookup('dig', 'open-telekom-cloud.com.')}}"
         openstack_dns: "{{ lookup('dig', 'openstack.org')}}"
+        zone_name: "{{ prefix }}apimon.tsi.org."
 
     - block:
 
