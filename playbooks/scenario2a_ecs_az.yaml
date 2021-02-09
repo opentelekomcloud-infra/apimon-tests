@@ -46,13 +46,9 @@
           port_range_max: 22
           remote_ip_prefix: 0.0.0.0/0
 
-      - name: Get network facts
-        openstack.cloud.networks_info:
-          name: "{{ test_network_name }}"
-        register: networks
-
-      - set_fact:
-          network_azs: "{{ networks['openstack_networks'][0]['availability_zones'] }}"
+      - name: Get Availability zones
+        opentelekomcloud.cloud.availability_zone_info:
+        register: azs
 
       - name: "Create server in {{item}}"
         include_role:
@@ -64,8 +60,8 @@
           server_flavor: "{{ test_flavor }}"
           server_net: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
-          availability_zone: "{{ item }}"
-        loop: "{{ network_azs }}"
+          availability_zone: "{{ item['name'] }}"
+        loop: "{{ azs['availability_zones'] }}"
 
       always:
         # do something here
