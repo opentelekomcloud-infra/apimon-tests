@@ -8,22 +8,22 @@
   tasks:
     - set_fact:
        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
-       zone_name: "{{ prefix }}apimon.tsi.org."
 
     - name: Try dig open-telekom-cloud.com
       set_fact:
         otc_dns: "{{ lookup('dig', 'open-telekom-cloud.com.')}}"
         openstack_dns: "{{ lookup('dig', 'openstack.org')}}"
+        zone_name: "{{ prefix }}apimon.tsi.org."
 
     - block:
 
       - name: Create zone
-        os_zone:
+        openstack.cloud.dns_zone:
           name: "{{ zone_name }}"
           state: present
 
       - name: Create recordset
-        os_recordset:
+        openstack.cloud.recordset:
           zone: "{{ zone_name }}"
           state: present
           recordset_type: "A"
@@ -31,7 +31,7 @@
           name: "a1.{{ zone_name }}"
 
       - name: Delete recordset
-        os_recordset:
+        openstack.cloud.recordset:
           zone: "{{ zone_name }}"
           state: absent
           name: "a1.{{ zone_name }}"
@@ -39,6 +39,6 @@
       always:
 
         - name: Delete zone
-          os_zone:
+          openstack.cloud.dns_zone:
             name: "{{ zone_name }}"
             state: absent

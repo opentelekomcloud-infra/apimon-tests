@@ -6,31 +6,26 @@
   tasks:
 
     - block:
-      - name: create kp
-        os_keypair:
-          name: blablabla
-      #       - name: "some_custom.role: segmt2: real name under role"
-      #         os_networks_facts:
-      #           name: "galera_net"
-      #           availability_zone: "{{ azi | default(omit) }}"
-      #   
-      #       - debug:
-      #           var: openstack_networks
-      #       
-      #       - set_fact:
-      #           network_azs: "{{ openstack_networks[0]['availability_zones'] }}"
-      #       
-      #       - wait_for:
-      #           port: 22
-      #           host: localhost
-      #         tags: "az={{azi}}"
-      #           # 
-      #           # - command: /usr/bin/false
-      #           #   
-      #           #       - debug:
-      #           #           msg: "{{ item }}"
-      #           #         loop: "{{network_azs}}"
-      #           # 
-      #       rescue:
-      #         - debug:
-      #             msg: "rescued"
+      - name: "some_custom.role: segmt2: real name under role"
+        openstack.cloud.networks_info:
+          name: "admin_external_net"
+        tags:
+          - "metric=tmp"
+        register: nets
+
+      - name: Load images
+        openstack.cloud.image_info:
+        register: images
+
+      - debug:
+          var: nets
+        tags:
+          - "metric=tmp"
+
+      - wait_for:
+          port: 22
+          host: localhost
+        tags: "az={{azi}}"
+      rescue:
+        - debug:
+            msg: "rescued"

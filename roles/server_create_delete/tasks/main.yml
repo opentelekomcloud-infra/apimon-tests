@@ -3,7 +3,7 @@
 
 - block:
   - name: Create Server in {{ availability_zone }}
-    os_server:
+    openstack.cloud.server:
       auto_ip: false
       availability_zone: "{{ availability_zone | default(omit) }}"
       name: "{{ server_fqdn }}"
@@ -21,14 +21,14 @@
       server_id: "{{ server.id }}"
   
   - name: Attach FIP
-    os_floating_ip:
+    openstack.cloud.floating_ip:
       server: "{{ server_id }}"
     tags:
       - "metric=create_server"
       - "az={{ availability_zone }}"
   
   - name: get server info
-    os_server_info:
+    openstack.cloud.server_info:
       server: "{{ server_id }}"
     register: server
     tags:
@@ -61,7 +61,7 @@
         var: server
         
     - name: Delete server from {{ availability_zone }}
-      os_server:
+      openstack.cloud.server:
         state: absent
         name: "{{ server_id }}"
         delete_fip: True
@@ -69,7 +69,7 @@
       tags: ["metric=delete_server"]
       
     - name: Backup Delete server from {{ availability_zone }}
-      os_server:
+      openstack.cloud.server:
         state: absent
         name: "{{ server_fqdn }}"
         delete_fip: True

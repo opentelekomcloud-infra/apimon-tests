@@ -27,12 +27,12 @@
           enable_snat: False
 
       - name: Create SecurityGroup
-        os_security_group:
+        openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: Test Security group created by APImon
 
       - name: Create SecurityGroupRule
-        os_security_group_rule:
+        openstack.cloud.security_group_rule:
           security_group: "{{ test_security_group_name }}"
           protocol: tcp
           port_range_min: 2208
@@ -44,12 +44,12 @@
         tags: 'service=network'
 
       - name: Get single network details
-        os_networks_info:
+        openstack.cloud.networks_info:
           name: admin_external_net
         register: nets
 
       - name: List Subnets
-        os_subnets_info:
+        openstack.cloud.subnets_info:
         register: subnets
 
       - name: List Routers
@@ -72,7 +72,7 @@
         - block:
 
             - name: Delete SecurityGroupRule
-              os_security_group_rule:
+              openstack.cloud.security_group_rule:
                 state: "absent"
                 security_group: "{{ test_security_group_name }}"
                 protocol: tcp
@@ -81,7 +81,7 @@
                 remote_ip_prefix: 0.0.0.0/0
 
             - name: Delete SecurityGroup
-              os_security_group:
+              openstack.cloud.security_group:
                 state: "absent"
                 name: "{{ test_security_group_name }}"
 

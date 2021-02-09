@@ -15,20 +15,16 @@
 
     - block:
 
-      - name: Get network facts
-        os_networks_info:
-          name: admin_external_net
-        register: nets
-
-      - set_fact:
-          network_azs: "{{ nets['openstack_networks'][0]['availability_zones'] }}"
+      - name: Get Availability zones
+        opentelekomcloud.cloud.availability_zone_info:
+        register: azs
 
       - name: "Create Volume in AZs"
         include_role:
           name: volume_create_delete
         vars:
-          volume_name: "{{ (item + '.' + test_volume_name) }}"
-          availability_zone: "{{ item }}"
+          volume_name: "{{ (item['name'] + '.' + test_volume_name) }}"
+          availability_zone: "{{ item['name'] }}"
           size: 10
           display_name: "{{volume_name}}"
-        loop: "{{ network_azs }}"
+        loop: "{{ azs['availability_zones'] }}"

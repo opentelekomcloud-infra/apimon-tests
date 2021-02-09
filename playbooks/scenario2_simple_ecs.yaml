@@ -38,10 +38,10 @@
           state: "present"
 
       - name: List Networks
-        os_networks_info:
+        openstack.cloud.networks_info:
 
       - name: List Subnets
-        os_subnets_info:
+        openstack.cloud.subnets_info:
 
       - name: List Routers
         script: list_routers.py
@@ -59,12 +59,12 @@
         tags: 'service=compute'
 
       - name: Create SecurityGroup
-        os_security_group:
+        openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: Test Security group created by APImon
 
       - name: Create SecurityGroupRule
-        os_security_group_rule:
+        openstack.cloud.security_group_rule:
           security_group: "{{ test_security_group_name }}"
           protocol: tcp
           port_range_min: 22
@@ -72,17 +72,17 @@
           remote_ip_prefix: 0.0.0.0/0
 
       - name: List Images
-        os_image_info:
+        openstack.cloud.image_info:
 
       - name: List Flavors
-        os_flavor_info:
+        openstack.cloud.compute_flavor_info:
 
       - name: List Servers
-        os_server_info:
+        openstack.cloud.server_info:
 
       ############
       - name: Create Server in default AZ
-        os_server:
+        openstack.cloud.server:
           auto_ip: false
           name: "{{ test_server_fqdn }}"
           image: "{{ test_image }}"
@@ -100,14 +100,14 @@
           server_id: "{{ server.id }}"
 
       - name: Attach FIP
-        os_floating_ip:
+        openstack.cloud.floating_ip:
           server: "{{ server_id }}"
         tags:
           - "metric=create_server"
           - "az=default"
 
       - name: get server info
-        os_server_info:
+        openstack.cloud.server_info:
           server: "{{ server_id }}"
         register: server
         tags:
@@ -121,7 +121,7 @@
           - "az=default"
 
       - name: find servers by name
-        os_server_info:
+        openstack.cloud.server_info:
           server: "{{ test_server_fqdn }}"
         register: servers
         tags:
@@ -152,7 +152,7 @@
         tags: 'service=compute'
 
       - name: Modify metadata
-        os_server_metadata:
+        openstack.cloud.server_metadata:
           server: "{{ server_id }}"
           state: present
           meta:
@@ -160,24 +160,24 @@
             meta_k2: v2
 
       - name: Delete metadata
-        os_server_metadata:
+        openstack.cloud.server_metadata:
           server: "{{ server_id }}"
           state: absent
           meta:
             meta_k1:
             meta_k2:
 
-      - name: Set Tags on the Server
-        os_tag:
-          server: "{{ server_id }}"
-          state: present
-          tags:
-            - tag1
-            - tag2
-          mode: set
+              #- name: Set Tags on the Server
+              #  opentelekomcloud.cloud.tag:
+              #    server: "{{ server_id }}"
+              #    state: present
+              #    tags:
+              #      - tag1
+              #      - tag2
+              #    mode: set
 
       - name: Delete SecurityGroupRule
-        os_security_group_rule:
+        openstack.cloud.security_group_rule:
           state: "absent"
           security_group: "{{ test_security_group_name }}"
           protocol: tcp
@@ -188,14 +188,14 @@
       always:
         - block:
             - name: Delete server
-              os_server:
+              openstack.cloud.server:
                 state: absent
                 name: "{{ server_id | default(test_server_fqdn) }}"
                 delete_fip: True
               tags: ["metric=delete_server"]
 
             - name: Delete SecurityGroup
-              os_security_group:
+              openstack.cloud.security_group:
                 state: "absent"
                 name: "{{ test_security_group_name }}"
 
@@ -211,6 +211,6 @@
                 name: opentelekomcloud.keypair
               vars:
                 keypair_name: "{{ test_keypair_name }}"
-                force_delete_keyp : true
+                force_delete_key: true
                 state: "absent"
           ignore_errors: true

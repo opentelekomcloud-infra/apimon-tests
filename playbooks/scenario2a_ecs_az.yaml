@@ -34,25 +34,21 @@
           network_name: "{{ test_network_name }}"
 
       - name: Create SG
-        os_security_group:
+        openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: "dummy"
 
       - name: Create SG-Rule
-        os_security_group_rule:
+        openstack.cloud.security_group_rule:
           security_group: "{{ test_security_group_name }}"
           protocol: tcp
           port_range_min: 22
           port_range_max: 22
           remote_ip_prefix: 0.0.0.0/0
 
-      - name: Get network facts
-        os_networks_info:
-          name: "{{ test_network_name }}"
-        register: networks
-
-      - set_fact:
-          network_azs: "{{ networks['openstack_networks'][0]['availability_zones'] }}"
+      - name: Get Availability zones
+        opentelekomcloud.cloud.availability_zone_info:
+        register: azs
 
       - name: "Create server in {{item}}"
         include_role:
@@ -64,14 +60,14 @@
           server_flavor: "{{ test_flavor }}"
           server_net: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
-          availability_zone: "{{ item }}"
-        loop: "{{ network_azs }}"
+          availability_zone: "{{ item['name'] }}"
+        loop: "{{ azs['availability_zones'] }}"
 
       always:
         # do something here
         - block:
             - name: Delete SG
-              os_security_group:
+              openstack.cloud.security_group:
                 name: "{{ test_security_group_name }}"
                 state: absent
 
@@ -89,4 +85,9 @@
                 keypair_name: "{{ test_keypair_name }}"
                 state: absent
                 force_delete_key: true
+
+            - name: Pause for 5 minutes to give Neutron time
+              pause:
+                minutes: 5
+
           ignore_errors: true

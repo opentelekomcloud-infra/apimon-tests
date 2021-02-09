@@ -15,10 +15,10 @@
     - block:
 
       - name: List Images
-        os_image_info:
+        openstack.cloud.image_info:
 
       - name: Get single Image
-        os_image_info:
+        openstack.cloud.image_info:
           image: Standard_Fedora_30_latest
 
       - name: Create directory for images
@@ -34,7 +34,7 @@
           validate_certs: false
 
       - name: Upload cirros image
-        os_image:
+        openstack.cloud.image:
           name: "{{ image_name }}"
           container_format: bare
           disk_format: qcow2
@@ -48,7 +48,7 @@
       always:
 
         - name: Delete cirros image
-          os_image:
+          openstack.cloud.image:
             name: "{{ image_name }}"
             state: absent
           tags:
