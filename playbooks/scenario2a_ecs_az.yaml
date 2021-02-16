@@ -55,7 +55,7 @@
           name: server_create_delete
         vars:
           server_keypair_name: "{{ test_keypair_name }}"
-          server_fqdn: "{{ (item + '.' + test_server_fqdn) }}"
+          server_fqdn: "{{ (item['name'] + '.' + test_server_fqdn) }}"
           server_image: "{{ test_image }}"
           server_flavor: "{{ test_flavor }}"
           server_net: "{{ test_network_name }}"
