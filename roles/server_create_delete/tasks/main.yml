@@ -12,8 +12,10 @@
       key_name: "{{ server_keypair_name }}"
       network: "{{ server_net }}"
       security_groups: "{{ security_group }}"
+      # WARN: template and use of vars may cause replacement of \" to \'
+      userdata: "{{ lookup('template', 'coreos-ignition.json.j2') | to_json | string }}"
     tags:
-      - "metric=create_server"
+      - "metric=create_server{{ metric_suffix }}"
     register: server
 
   - name: get server id
@@ -24,7 +26,7 @@
     openstack.cloud.floating_ip:
       server: "{{ server_id }}"
     tags:
-      - "metric=create_server"
+      - "metric=create_server{{ metric_suffix }}"
       - "az={{ availability_zone }}"
   
   - name: get server info
@@ -32,28 +34,36 @@
       server: "{{ server_id }}"
     register: server
     tags:
-      - "metric=create_server"
+      - "metric=create_server{{ metric_suffix }}"
       - "az={{ availability_zone }}"
   
   - set_fact:
       server_ip: "{{ server['openstack_servers'][0]['public_v4'] }}"
     tags: 
-      - "metric=create_server"
+      - "metric=create_server{{ metric_suffix }}"
       - "az={{ availability_zone }}"
   
   # Wait for the server to really start and become accessible
   - name: Wait for SSH port to become active
-    wait_for:
+    ansible.builtin.wait_for:
       port: 22
       host: "{{ server_ip }}"
-      timeout: 600
-    tags: ["az={{availability_zone}}", "service=compute", "metric=create_server"]
-  
+      timeout: 300
+    tags: ["az={{ availability_zone }}", "service=compute", "metric=create_server{{ metric_suffix }}"]
+
+  - name: Wait another 5 sec for coreos
+    pause:
+      seconds: 5
+    tags: ["az={{ availability_zone }}", "service=compute", "metric=create_server{{ metric_suffix }}"]
+    when: 
+      - coreos is defined
+      - coreos | bool
+
   - name: Try connecting
     retries: 10
     delay: 1
-    command: "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' linux@{{server_ip}} -i ~/.ssh/{{server_keypair_name}}.pem"
-    tags: ["az={{availability_zone}}", "service=compute", "metric=create_server"]
+    command: "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' {{ ssh_user_name }}@{{ server_ip }} -i ~/.ssh/{{ server_keypair_name }}.pem"
+    tags: ["az={{ availability_zone }}", "service=compute", "metric=create_server{{ metric_suffix }}"]
   
   always:
     - name: Debug server info
@@ -67,11 +77,12 @@
         delete_fip: True
       when: server_id is defined
       tags: ["metric=delete_server"]
-      
-    - name: Backup Delete server from {{ availability_zone }}
-      openstack.cloud.server:
-        state: absent
-        name: "{{ server_fqdn }}"
-        delete_fip: True
-      when: server_id is not defined
-      tags: ["metric=delete_server"]
+
+    - name: Try to get deleted server info
+      openstack.cloud.server_info:
+        server: "{{ server_id }}"
+      register: server
+
+    - assert:
+        that:
+          - server.openstack_servers | length == 0

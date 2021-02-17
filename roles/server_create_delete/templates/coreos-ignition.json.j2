@@ -1,0 +1,16 @@
+{
+  "ignition": {
+    "version": "3.0.0"
+  },
+  "passwd": {
+    "users": [
+      {
+        "groups": ["sudo"],
+        "name": "{{ ssh_user_name }}",
+        "sshAuthorizedKeys": [
+          "{{ ssh_key_pub | replace('\n','') }}"
+        ]
+      }
+    ]
+  }
+}

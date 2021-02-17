@@ -1,0 +1,112 @@
+---
+# Scenario to test ECS service with CoreOS image in different AZs
+# A VPC is created and VM is being started in different AZs
+#
+
+- name: Scenario 2c - Compute per AZ
+  hosts: localhost
+  vars:
+    prefix: scenario2c-
+    test_image_url: https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/33.20210117.3.2/x86_64/fedora-coreos-33.20210117.3.2-openstack.x86_64.qcow2.xz
+    test_image_name: fedora-coreos-33
+    test_flavor: s2.medium.2
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        test_server_fqdn: "{{ (prefix + '.host') }}"
+        test_security_group_name: "{{ (prefix + '-sg') }}"
+        test_keypair_name: "{{ (prefix + '-kp') }}"
+        test_network_name: "{{ ( prefix + '-net') }}"
+
+    - name: Find whether we already have the image
+      openstack.cloud.image_info:
+        image: "{{ test_image_name }}"
+      register: existing_image
+
+    - include_role:
+        name: "upload_image"
+      vars:
+        image_url: "{{ test_image_url }}"
+        image_name: "{{ test_image_name }}"
+      when:
+        - existing_image.openstack_image == None
+
+    - name: Proceed with the scenario
+      when: existing_image.openstack_image is defined
+      block:
+        - name: Create Keypair
+          include_role:
+            name: keypair
+          vars:
+            keypair_name: "{{ test_keypair_name }}"
+
+        - name: Create VPC
+          include_role:
+            name: vpc
+          vars:
+            network_name: "{{ test_network_name }}"
+
+        - name: Create SG
+          openstack.cloud.security_group:
+            name: "{{ test_security_group_name }}"
+            description: "SG for scenario2c {{prefix}} run"
+
+        - name: Create SG-Rule
+          openstack.cloud.security_group_rule:
+            security_group: "{{ test_security_group_name }}"
+            protocol: tcp
+            port_range_min: 22
+            port_range_max: 22
+            remote_ip_prefix: 0.0.0.0/0
+
+        - name: Get Availability zones
+          opentelekomcloud.cloud.availability_zone_info:
+          register: azs
+
+        - name: "Create and delete server"
+          include_role:
+            name: server_create_delete
+          vars:
+            server_keypair_name: "{{ test_keypair_name }}"
+            server_fqdn: "{{ (item['name'] + '.' + test_server_fqdn) }}"
+            server_image: "{{ test_image_name }}"
+            server_flavor: "{{ test_flavor }}"
+            server_net: "{{ test_network_name }}"
+            security_group: "{{ test_security_group_name }}"
+            availability_zone: "{{ item['name'] }}"
+            ssh_key_pub: "{{ ssh_keys[test_keypair_name] }}"
+            ssh_user_name: "core"
+            coreos: True
+            metric_suffix: "_coreos"
+          loop: "{{ azs['availability_zones'] }}"
+
+      always:
+        # do something here
+        - block:
+            - name: Delete SG
+              openstack.cloud.security_group:
+                name: "{{ test_security_group_name }}"
+                state: absent
+
+            - name: Delete VPC
+              include_role:
+                name: vpc
+              vars:
+                state: absent
+                network_name: "{{ test_network_name }}"
+
+            - name: Delete KP
+              include_role:
+                name: keypair
+              vars:
+                keypair_name: "{{ test_keypair_name }}"
+                state: absent
+                force_delete_key: true
+
+            - name: Pause for 5 minutes to give Neutron time
+              pause:
+                minutes: 5
+
+          ignore_errors: true

@@ -1,0 +1,42 @@
+---
+# Management of the keypair
+- block:
+  - name: Create KeyPair
+    openstack.cloud.keypair:
+      state: present
+      name: "{{ keypair_name }}"
+    register: keypair_output
+
+  - name: Ensure directory is present
+    ansible.builtin.file:
+      path: "{{ keypair_private_key_dest | dirname }}"
+      state: "directory"
+    when:
+      - keypair_output.changed
+
+  - name: Save private key
+    copy:
+      dest: "{{ keypair_private_key_dest }}"
+      content: "{{ keypair_output['key']['private_key'] }}"
+      mode: 0600
+    when:
+      - keypair_output is defined and keypair_output['key']['private_key'] is defined
+      - keypair_output.changed
+
+  - set_fact:
+      ssh_keys: "{{ ssh_keys|default({}) | combine({keypair_name: keypair_output['key']['public_key']}) }}"
+  when: state != 'absent'
+
+- block:
+  - name: Delete KeyPair
+    openstack.cloud.keypair:
+      state: absent
+      name: "{{ keypair_name }}"
+
+  - name: delete private key
+    file:
+      path: "{{ keypair_private_key_dest }}"
+      state: absent
+    when: force_delete_key|bool
+
+  when: state == 'absent'

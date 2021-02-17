@@ -1,0 +1,50 @@
+---
+# Upload image into the cloud
+#
+- name: Create directory for images
+  ansible.builtin.file:
+    name: "{{ upload_image_images_location }}"
+    state: "directory"
+    recurse: true
+
+- set_fact:
+    image_url_basename: "{{ image_url | basename }}"
+
+- set_fact:
+    image_file: "{{ image_url_basename | regex_replace('^(.*)\\.(xz|gz)$', '\\1') }}"
+
+- name: Find whether we have file locally
+  ansible.builtin.stat:
+    path: "{{ upload_image_images_location }}/{{ image_file }}"
+  register: image_present
+
+- name: Download image
+  ansible.builtin.get_url:
+    url: "{{ image_url }}"
+    dest: "{{ upload_image_images_location }}"
+    validate_certs: false
+  register: download
+  when:
+    - not image_present.stat.exists
+
+- name: Unpack file
+  ansible.builtin.command: "unxz {{ download.dest }}"
+  args:
+    chdir: "{{ upload_image_images_location }}"
+    creates: "{{ image_file }}"
+  register: unxz
+  when:
+    - not image_present.stat.exists
+    - download.dest is defined
+
+- name: Upload image
+  openstack.cloud.image:
+    name: "{{ image_name }}"
+    container_format: "bare"
+    disk_format: "qcow2"
+    state: "present"
+    min_disk: 1
+    timeout: 1200
+    filename: "{{ upload_image_images_location }}/{{ image_file }}"
+  tags:
+    - "metric=image_upload"

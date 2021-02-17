@@ -1,0 +1,27 @@
+---
+# defaults file for ansible-role-otc-vpc
+
+# Elements to be created by default. Order is important.
+task_manager:
+  - net
+  - subnet
+  - router
+
+state: present
+
+external_network_name: admin_external_net
+prefix: test- # This should be overridden in inventory
+
+router_name_suffix: otc-vpc-router
+network_name_suffix: otc-net
+subnet_name_suffix: default-subnet
+network_name: "{{ (prefix + network_name_suffix) }}"
+router_name: "{{ (prefix + router_name_suffix) }}"
+
+subnet_name: "{{ (prefix + subnet_name_suffix) }}"
+subnet_cidr: "192.168.110.0/24"
+subnet_dns_servers: "{{ ['100.125.4.25', '8.8.8.8'] }}"
+
+# By default SNAT will be disabled on the router. Pass `enable_snat: false`
+# to disable it
+#enable_snat: None

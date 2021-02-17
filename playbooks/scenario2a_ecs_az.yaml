@@ -23,13 +23,13 @@
 
       - name: Create Keypair
         include_role:
-          name: opentelekomcloud.keypair
+          name: keypair
         vars:
           keypair_name: "{{ test_keypair_name }}"
 
       - name: Create VPC
         include_role:
-          name: opentelekomcloud.vpc
+          name: vpc
         vars:
           network_name: "{{ test_network_name }}"
 
@@ -61,6 +61,7 @@
           server_net: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
           availability_zone: "{{ item['name'] }}"
+          metric_suffix: ""
         loop: "{{ azs['availability_zones'] }}"
 
       always:
@@ -73,14 +74,14 @@
 
             - name: Delete VPC
               include_role:
-                name: opentelekomcloud.vpc
+                name: vpc
               vars:
                 state: absent
                 network_name: "{{ test_network_name }}"
 
             - name: Delete KP
               include_role:
-                name: opentelekomcloud.keypair
+                name: keypair
               vars:
                 keypair_name: "{{ test_keypair_name }}"
                 state: absent
@@ -89,5 +90,4 @@
             - name: Pause for 5 minutes to give Neutron time
               pause:
                 minutes: 5
-
           ignore_errors: true
