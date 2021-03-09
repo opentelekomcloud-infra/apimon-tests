@@ -1,0 +1,6 @@
+---
+- name: Create Network
+  openstack.cloud.network:
+    name: "{{ network_name }}"
+    state: "{{ state }}"
+  register: net_network

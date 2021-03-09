@@ -1,0 +1,16 @@
+---
+- name: Create default subnet
+  openstack.cloud.subnet:
+    name: "{{ subnet_name }}"
+    state: "{{ state }}"
+    network_name: "{{ network_name }}"
+    cidr: "{{ subnet_cidr }}"
+    dns_nameservers: "{{ subnet_dns_servers | default(omit) }}"
+  register: net_subnet
+  when: state != 'absent'
+
+- name: Delete default subnet
+  openstack.cloud.subnet:
+    name: "{{ subnet_name }}"
+    state: "{{ state }}"
+  when: state == 'absent'

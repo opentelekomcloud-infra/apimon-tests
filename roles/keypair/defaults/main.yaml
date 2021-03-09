@@ -1,0 +1,10 @@
+---
+prefix: test- # This should be overridden in inventory
+
+keypair_name: "{{ (prefix + 'KeyPair') }}"
+keypair_private_key_dest: "{{ ('~/.ssh/' + keypair_name + '.pem') }}"
+
+# set this to force key deletion
+force_delete_key: false
+
+state: present

@@ -53,3 +53,12 @@
             state: absent
           tags:
             - "metric=image_delete"
+
+        - name: Verify image is deleted
+          openstack.cloud.image_info:
+            image: "{{ image_name }}"
+          register: image_state
+
+        - assert:
+            that:
+              - image_state.openstack_image is defined

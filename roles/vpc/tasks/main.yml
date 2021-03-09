@@ -1,0 +1,25 @@
+---
+# tasks file for otc-vpc-role
+# Create
+- block:
+  - include: "{{ net_task }}.yaml"
+    loop_control:
+      loop_var: net_task
+    with_items: "{{ task_manager }}"
+
+  - name: Assert that elements were registered
+    assert:
+      that:
+        - net_network is defined
+        - net_subnet is defined
+        - net_router is defined
+
+  when: state == 'present'
+
+# Remove
+- block:
+  - include: "{{ net_task }}.yaml"
+    loop_control:
+      loop_var: net_task
+    with_items: "{{ task_manager | reverse | list }}"
+  when: state == 'absent'

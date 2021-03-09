@@ -1,0 +1,5 @@
+---
+ssh_user_name: "linux"
+ssh_key_pub: ""
+coreos: False
+metric_suffix: ""
