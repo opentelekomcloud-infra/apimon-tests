@@ -6,8 +6,13 @@
   tasks:
     - name: Get token
       script: get_token.py
+      args:
+        executable: python3
+
       tags: 'service=identity'
 
     - name: Get token from token
       script: get_token_from_token.py
+      args:
+        executable: python3
       tags: 'service=identity'

@@ -41,6 +41,8 @@
 
       - name: List SecurityGroups with Rules
         script: list_security_groups.py
+        args:
+          executable: python3
         tags: 'service=network'
 
       - name: Get single network details
@@ -50,10 +52,14 @@
 
       - name: List Subnets
         openstack.cloud.subnets_info:
+        args:
+          executable: python3
         register: subnets
 
       - name: List Routers
         script: list_routers.py
+        args:
+          executable: python3
         tags: 'service=network'
 
         #       - name: Create floatingip
@@ -62,6 +68,8 @@
 
       - name: List floatingips
         script: list_floatingips.py
+        args:
+          executable: python3
         tags: 'service=network'
 
       always:

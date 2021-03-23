@@ -21,6 +21,8 @@
 
     - name: List Keypairs
       script: list_keypairs.py
+      args:
+        executable: python3
       tags: 'service=compute'
 
     - name: Ensure .ssh exists
@@ -45,6 +47,8 @@
 
       - name: List Routers
         script: list_routers.py
+        args:
+          executable: python3
         tags: 'service=network'
 
       - name: Create VPC (Router + Net + Subnet)
@@ -56,6 +60,8 @@
 
       - name: List SecurityGroups with Rules
         script: list_security_groups.py
+        args:
+          executable: python3
         tags: 'service=compute'
 
       - name: Create SecurityGroup
@@ -149,6 +155,8 @@
       ############
       - name: Get Server metadata
         script: "get_server_metadata.py {{ server_id }}"
+        args:
+          executable: python3
         tags: 'service=compute'
 
       - name: Modify metadata

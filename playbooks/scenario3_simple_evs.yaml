@@ -41,17 +41,17 @@
             timeout: 1800
           register: snapshot
           tags: ["metric=create_volume_snapshot"]
-          
+
         - name: Get info about snapshot
           debug:
             var: snapshot
-            
+
         - name: Re-fetch info about snapshot
           openstack.cloud.volume_snapshot_info:
             name: "{{ snapshot_name }}"
           register: snapshot_info
           tags: 'service=block_storage'
-          
+
         - assert:
             that:
               - snapshot_info.volume_snapshots[0].status == 'available'
@@ -74,12 +74,16 @@
 
         - name: Restore backup
           script: "restore_backup.py {{backup_name}} {{volume_name}} {{ (volume_name + 'new') }}"
+          args:
+            executable: python3
           tags:
             - "service=block_storage"
             - "metric=restore_volume_backup"
 
         - name: Modify snapshot
           script: "modify_snapshot.py {{snapshot_name}} {{ (snapshot_name + '_new') }}"
+          args:
+            executable: python3
           tags: 'service=block_storage'
 
       rescue:
@@ -92,7 +96,7 @@
         - name: Print backup info
           debug:
             var: backup_info
-            
+
         - name: Get info about snapshot
           openstack.cloud.volume_snapshot_info:
             name: "{{ snapshot_name }}"
@@ -102,7 +106,7 @@
         - name: Print snapshot info
           debug:
             var: snapshot_info
-            
+
         - name: Get info about volume
           openstack.cloud.volume_info:
             name: "{{ volume_name }}"
