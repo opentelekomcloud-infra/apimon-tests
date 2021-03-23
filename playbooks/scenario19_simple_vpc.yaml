@@ -52,8 +52,6 @@
 
       - name: List Subnets
         openstack.cloud.subnets_info:
-        args:
-          executable: python3
         register: subnets
 
       - name: List Routers
