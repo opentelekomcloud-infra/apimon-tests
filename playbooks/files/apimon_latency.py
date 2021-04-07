@@ -33,7 +33,7 @@ def main():
     try:
         rsp = requests.get(host, timeout=request_timeout)
         duration = rsp.elapsed.total_seconds() * 1000
-        name_suffix = 'passed'
+        name_suffix = 'passed' if rsp.status_code < 400 else 'failed'
     except requests.exceptions.ConnectionError:
         name_suffix = 'failed'
     metric = dict(
