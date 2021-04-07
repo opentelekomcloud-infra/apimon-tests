@@ -6,11 +6,11 @@ test_server_fqdn: test_scenario.bastion.host
 
 # those hosts are used in the scenario30 to watch latencies
 watch_hosts:
-  - host: "https://console.otc.t-systems.com"
-    name: "console"
-  - host: "https://console.otc.icsi.eumetstat.int"
+  - host: "https://console.otc.icsi.eumetsat.int"
     name: "console_eum"
   - host: "https://console.o13bb.otc.t-systems.com"
-    name: "console_eum"
-  - host: "https://docs.otc.t-systems.com"
-    name: "docs"
+    name: "console_sbb"
+  - host: "https://docs.o13bb.otc.t-systems.com"
+    name: "docs_eum"
+  - host: "https://docs.otc.icsi.eumetsat.int"
+    name: "docs_sbb"
