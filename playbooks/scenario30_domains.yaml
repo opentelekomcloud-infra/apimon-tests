@@ -9,3 +9,8 @@
       args:
         executable: "/usr/bin/python3"
       loop: "{{ watch_hosts }}"
+
+    - name: Pause for 10 seconds
+      pause:
+        seconds: 10
+
