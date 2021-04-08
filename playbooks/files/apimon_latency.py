@@ -40,14 +40,23 @@ def main():
             metric_type='ms',
             __type='metric'
         )
-    except requests.exceptions.ConnectionError:
+        if rsp.status_code < 400:
+            rc = 0
+        else:
+            rc = 3
+            print('%s returned %s' % (host, rsp.status_code))
+    except requests.exceptions.ConnectionError as ex:
         metric = dict(
             name='%s.failed' % (metric_name),
             metric_type='c',
             __type='metric'
         )
+        rc = 3
+        print('%s caused %s' % (host, ex))
 
     emit_metric(socket, metric)
+
+    exit(rc)
 
 
 main()
