@@ -33,16 +33,20 @@ def main():
     try:
         rsp = requests.get(host, timeout=request_timeout)
         duration = rsp.elapsed.total_seconds() * 1000
-        name_suffix = 'passed' if rsp.status_code < 400 else 'failed'
+        metric_name = '%s.%s' % (metric_name, str(rsp.status_code))
+        metric = dict(
+            name=metric_name,
+            value=duration,
+            metric_type='ms',
+            __type='metric'
+        )
     except requests.exceptions.ConnectionError:
-        name_suffix = 'failed'
-    metric = dict(
-        name=metric_name,
-        value=duration,
-        metric_type='ms',
-        name_suffix=name_suffix,
-        __type='metric'
-    )
+        metric = dict(
+            name='%s.failed' % (metric_name),
+            metric_type='c',
+            __type='metric'
+        )
+
     emit_metric(socket, metric)
 
 
