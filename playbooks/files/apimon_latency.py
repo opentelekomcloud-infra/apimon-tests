@@ -44,7 +44,7 @@ def main():
             rc = 0
         else:
             rc = 3
-            print('%s returned %s' % (host, rsp.status_code))
+            print('%s returned %s: %s' % (host, rsp.status_code, rsp.text))
     except requests.exceptions.ConnectionError as ex:
         metric = dict(
             name='%s.failed' % (metric_name),
