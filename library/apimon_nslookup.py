@@ -108,14 +108,15 @@ class ApimonNsLookup(ApimonModule):
                 ns, ns_ip, self.params['records'])
             result['records'][ns] = records
 
-        if self.metrics:
-            for metric in self.metrics:
-                self.emit_metric(metric, self.params['socket'])
+        if self.metrics and self.params['socket']:
+            self.emit_metrics(self.metrics, self.params['socket'])
+
+        result['metrics'] = self.metrics
 
         if not self.error_occured:
             self.exit(**result)
         else:
-            self.fail(**result)
+            self.fail(msg='failure', **result)
 
 
 def main():
