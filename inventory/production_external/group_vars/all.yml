@@ -12,7 +12,7 @@ watch_hosts:
   - host: "https://docs.otc.t-systems.com"
     name: "docs"
 
-# this is used by scenario31 - nslookup
+# This is used by scenario31 - nslookup
 nslookup_public:
   ns_servers: 
     - ns1.open-telekom-cloud.com.
@@ -22,18 +22,3 @@ nslookup_public:
     - docs.otc.t-systems.com
     - record: iam.eu-de.otc.t-systems.com
       name: iam_de
-    - record: iam.eu-nl.otc.t-systems.com
-      name: iam_nl
-
-nslookup_private:
-  ns_servers:
-    - 100.125.4.25
-  records:
-    - console.otc.t-systems.com
-    - docs.otc.t-systems.com
-    - record: iam.eu-de.otc.t-systems.com
-      name: iam_de
-    - record: iam.eu-nl.otc.t-systems.com
-      name: iam_nl
-    - sfs.eu-de.otc.t-systems.com
-
