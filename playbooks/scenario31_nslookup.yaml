@@ -8,6 +8,7 @@
       apimon_nslookup:
         ns_servers: "{{ nslookup_public.ns_servers }}"
         records: "{{ nslookup_public.records }}"
+      when: nslookup_public is defined
 
     - name: Perform nslookup for private DNS servers
       apimon_nslookup:
