@@ -49,7 +49,7 @@ class ApimonLatency(ApimonModule):
         try:
             rsp = requests.get(host, timeout=timeout)
             duration = rsp.elapsed.total_seconds() * 1000
-            metric_name = '%s.%s' % (name, str(rsp.status_code))
+            metric_name = 'curl.%s.%s' % (name, str(rsp.status_code))
             metric = dict(
                 name=metric_name,
                 value=duration,
@@ -78,7 +78,7 @@ class ApimonLatency(ApimonModule):
 
     def run(self):
 
-        result = dict(res={})
+        result = dict(messages={})
         self.metrics = []
         self.error_occured = False
 
@@ -89,17 +89,18 @@ class ApimonLatency(ApimonModule):
             else:
                 domain = host
                 name = domain.split('.')[0]
-            result['res'][domain] = self.perform_request(
+            result['messages'][domain] = self.perform_request(
                 domain, name, self.params['timeout'])
 
-        if self.params['socket']:
-            for metric in self.metrics:
-                self.emit_metric(metric, self.params['socket'])
+        if self.metrics and self.params['socket']:
+            self.emit_metrics(self.metrics, self.params['socket'])
+
+        result['metrics'] = self.metrics
 
         if not self.error_occured:
             self.exit(**result)
         else:
-            self.fail(**result)
+            self.fail(msg='failure', **result)
 
 
 def main():

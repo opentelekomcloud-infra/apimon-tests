@@ -56,20 +56,26 @@ class ApimonModule:
         except json.JSONDecodeError as err:
             return err.msg
 
-    def emit_metric(self, data, message_socket_address):
-        """push metrics to socket"""
+    def emit_metric(self, data, message_socket):
+        """push single metrics to socket"""
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as _socket:
             try:
-                _socket.connect(message_socket_address)
+                _socket.connect(message_socket)
                 msg = '%s\n' % self.serialize(data)
-                _socket.sendall(msg.encode('utf8'))
+                _socket.send(msg.encode('utf8'))
             except socket.error as err:
                 self.ansible.fail_json(
                     msg='error establishing connection to socket')
                 raise err
             except Exception as ex:
-                self.ansible.fail_json(msg='error writing message to socket')
+                self.ansible.fail_json(
+                    msg='error writing message to socket')
                 raise ex
+
+    def emit_metrics(self, metrics, message_socket):
+        """Emit array of metrics into the socket"""
+        for data in metrics:
+            self.emit_metric(data, message_socket)
 
     @staticmethod
     def normalize_statsd_name(name):
