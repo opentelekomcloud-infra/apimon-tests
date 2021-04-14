@@ -7,6 +7,10 @@
     - name: Measure latency
       apimon_latency:
         hosts: "{{ watch_hosts }}"
+      register: latencies
+
+    - debug:
+        var: latencies
 
     - name: Pause for 10 seconds
       pause:

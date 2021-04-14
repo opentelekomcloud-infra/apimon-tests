@@ -78,7 +78,7 @@ class ApimonLatency(ApimonModule):
 
     def run(self):
 
-        result = dict(results={})
+        result = dict(res={})
         self.metrics = []
         self.error_occured = False
 
@@ -89,7 +89,7 @@ class ApimonLatency(ApimonModule):
             else:
                 domain = host
                 name = domain.split('.')[0]
-            result['results'][domain] = self.perform_request(
+            result['res'][domain] = self.perform_request(
                 domain, name, self.params['timeout'])
 
         if self.params['socket']:
