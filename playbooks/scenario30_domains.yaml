@@ -5,10 +5,8 @@
   hosts: localhost
   tasks:
     - name: Measure latency
-      ansible.builtin.script: "apimon_latency.py {{ item.host }} {{ item.name }} 5"
-      args:
-        executable: "/usr/bin/python3"
-      loop: "{{ watch_hosts }}"
+      apimon_latency:
+        hosts: "{{ watch_hosts }}"
 
     - name: Pause for 10 seconds
       pause:

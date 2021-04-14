@@ -1,0 +1,22 @@
+---
+
+# Scenario for doing nslookup tests measuring latency
+- name: Scenario31 - NS Lookup latencies
+  hosts: localhost
+  tasks:
+    - name: Perform nslookup for public DNS servers
+      apimon_nslookup:
+        ns_servers: "{{ nslookup_public.ns_servers }}"
+        records: "{{ nslookup_public.records }}"
+      when: nslookup_public is defined
+
+    - name: Perform nslookup for private DNS servers
+      apimon_nslookup:
+        ns_servers: "{{ nslookup_private.ns_servers }}"
+        records: "{{ nslookup_private.records }}"
+      when: nslookup_private is defined
+
+    - name: Pause for 10 seconds
+      pause:
+        seconds: 10
+
