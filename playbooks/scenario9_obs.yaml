@@ -8,7 +8,10 @@
     prefix: scenario9-
   tasks:
     - set_fact:
-        container_name: "{{ (prefix + 'test-container-apimon') }}"
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) )[0:24] }}"
+
+    - set_fact:
+        container_name: "{{ (prefix + '-apimon') }}"
         object_name: "{{ (prefix + 'test-object-apimon') }}"
 
     - block:
@@ -17,17 +20,17 @@
         script: "create_container.py {{container_name}} "
         args:
           executable: python3
-      
+
       - name: Get Container
         script: "get_container.py {{container_name}} "
         args:
           executable: python3
-      
+
       - name: Create Object
         script: "create_object.py {{container_name}} {{object_name}} "
         args:
           executable: python3
-      
+
       - name: Get Object
         script: "get_object.py {{container_name}} {{object_name}} "
         args:
@@ -44,13 +47,14 @@
           executable: python3
 
       always:
+        - block:
+            - name: Delete Object
+              script: "delete_object.py {{container_name}} {{object_name}} "
+              args:
+                executable: python3
 
-        - name: Delete Object
-          script: "delete_object.py {{container_name}} {{object_name}} "
-          args:
-            executable: python3
-
-        - name: Delete Container
-          script: "delete_container.py {{container_name}} "
-          args:
-            executable: python3
+            - name: Delete Container
+              script: "delete_container.py {{container_name}} "
+              args:
+                executable: python3
+          ignore_errors: true
