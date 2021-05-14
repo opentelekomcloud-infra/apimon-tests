@@ -19,7 +19,7 @@
 
       - name: Get single Image
         openstack.cloud.image_info:
-          image: Standard_Fedora_30_latest
+          image: Standard_Fedora_33_latest
 
       - name: Create directory for images
         file:
