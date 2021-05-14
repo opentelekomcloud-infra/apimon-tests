@@ -7,7 +7,7 @@
   hosts: localhost
   vars:
     prefix: scenario2a-
-    test_image: Standard_Fedora_30_latest
+    test_image: Standard_Fedora_33_latest
     test_flavor: s2.medium.2
   tasks:
     - set_fact:
