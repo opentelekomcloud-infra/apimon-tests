@@ -14,15 +14,13 @@
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_network_name: "{{ ( prefix + '-net') }}"
         test_image: Standard_Fedora_33_latest
-        test_flavor: s3.medium.2
 
-    - name: Check if s3.medium.2 flavor exists
+    - name: Query specific flavor
       openstack.cloud.compute_flavor_info:
-        name: s3.medium.2
+        name: "{{ test_flavor }}"
       register: flavor_result
 
-    - name: Set test_flavor if required
-      set_fact:
+    - set_fact:
         test_flavor: s2.medium.2
       when: flavor_result.openstack_flavors | length==0
 
@@ -51,6 +49,9 @@
 
       - name: List Networks
         openstack.cloud.networks_info:
+
+      - name: List Flavors
+        openstack.cloud.compute_flavor_info:
 
       - name: List Subnets
         openstack.cloud.subnets_info:

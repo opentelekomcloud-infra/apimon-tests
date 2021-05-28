@@ -1,4 +1,7 @@
 ---
+# flavor
+test_flavor: s3.medium.2
+
 # cloud_name:
 test_keypair_name: api_monitoring_test
 test_security_group_name: test_sg
