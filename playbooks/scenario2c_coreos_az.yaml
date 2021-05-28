@@ -9,7 +9,7 @@
     prefix: scenario2c-
     test_image_url: https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/33.20210117.3.2/x86_64/fedora-coreos-33.20210117.3.2-openstack.x86_64.qcow2.xz
     test_image_name: fedora-coreos-33
-    test_flavor: s2.medium.2
+    test_flavor: s3.medium.2
   tasks:
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
@@ -19,6 +19,16 @@
         test_security_group_name: "{{ (prefix + '-sg') }}"
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_network_name: "{{ ( prefix + '-net') }}"
+
+    - name: Check if s3.medium.2 flavor exists
+      openstack.cloud.compute_flavor_info:
+        name: s3.medium.2
+      register: flavor_result
+
+    - name: Set test_flavor if required
+      set_fact:
+        test_flavor: s2.medium.2
+      when: flavor_result.openstack_flavors | length==0
 
     - name: Find whether we already have the image
       openstack.cloud.image_info:
