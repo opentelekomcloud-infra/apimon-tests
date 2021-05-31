@@ -24,7 +24,6 @@
           network_name: "{{ test_network_name }}"
           subnet_name: "{{ test_subnet_name }}"
           state: present
-          enable_snat: False
 
       - name: Create SecurityGroup
         openstack.cloud.security_group:

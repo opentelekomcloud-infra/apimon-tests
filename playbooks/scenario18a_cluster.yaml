@@ -26,7 +26,6 @@
           network_name: "{{ test_network_name }}"
           subnet_name: "{{ test_subnet_name }}"
           state: present
-          enable_snat: True
 
       - name: Create CCE Cluster
         opentelekomcloud.cloud.cce_cluster:
