@@ -14,7 +14,16 @@
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_network_name: "{{ ( prefix + '-net') }}"
         test_image: Standard_Fedora_33_latest
+
+    - name: Query specific flavor
+      openstack.cloud.compute_flavor_info:
+        name: "{{ test_flavor }}"
+      register: flavor_result
+
+    # using s2.medium.2 as fallback in case the flavor from inv is not available in the env
+    - set_fact:
         test_flavor: s2.medium.2
+      when: flavor_result.openstack_flavors | length==0
 
     - debug:
         msg: "Using prefix {{ prefix }}"
@@ -41,6 +50,9 @@
 
       - name: List Networks
         openstack.cloud.networks_info:
+
+      - name: List Flavors
+        openstack.cloud.compute_flavor_info:
 
       - name: List Subnets
         openstack.cloud.subnets_info:
@@ -79,9 +91,6 @@
 
       - name: List Images
         openstack.cloud.image_info:
-
-      - name: List Flavors
-        openstack.cloud.compute_flavor_info:
 
       - name: List Servers
         openstack.cloud.server_info:
