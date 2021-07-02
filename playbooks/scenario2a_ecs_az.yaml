@@ -8,6 +8,7 @@
   vars:
     prefix: scenario2a-
     test_image: Standard_Fedora_33_latest
+
   tasks:
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
