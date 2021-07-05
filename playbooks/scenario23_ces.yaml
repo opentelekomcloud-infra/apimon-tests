@@ -1,0 +1,147 @@
+---
+
+- name: Scenario 23 - basic CES alarm scenario
+  hosts: localhost
+  vars:
+    prefix: scenario23-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        test_router_name: "{{ (prefix + '-test_router_apimon') }}"
+        test_subnet_name: "{{ (prefix + '-test_subnet_apimon') }}"
+        test_network_name: "{{ (prefix + '-test_network_apimon') }}"
+        test_server_name: "{{ (prefix + '-test_server_apimon') }}"
+        test_image: Standard_Fedora_33_latest
+        test_keypair_name: "{{ (prefix + '-kp') }}"
+        test_ces_alarm_name: "{{ (prefix + 'alarm') }}"
+    
+    - name: Query specific flavor
+      openstack.cloud.compute_flavor_info:
+        name: "{{ test_flavor }}"
+      register: flavor_result
+
+    # using s2.medium.2 as fallback in case the flavor from inv is not available in the env
+    - set_fact:
+        test_flavor: s2.medium.2
+      when: flavor_result.openstack_flavors | length==0
+    
+    - name: Ensure .ssh exists
+      file:
+        path: "~/.ssh"
+        state: directory
+
+    - block:
+      
+       - name: Create Keypair
+         include_role:
+           name: opentelekomcloud.keypair
+         vars:
+           keypair_name: "{{ test_keypair_name }}"
+           state: "present"
+
+       - name: Create VPC (Router + Net + Subnet)
+         include_role:
+           name: opentelekomcloud.vpc
+         vars:
+           router_name: "{{ test_router_name }}"
+           network_name: "{{ test_network_name }}"
+           subnet_name: "{{ test_subnet_name }}"
+           state: present
+       
+       - name: Create Server in default AZ
+         openstack.cloud.server:
+           auto_ip: false
+           name: "{{ test_server_name }}"
+           image: "{{ test_image }}"
+           flavor: "{{ test_flavor }}"
+           key_name: "{{ test_keypair_name }}"
+           network: "{{ test_network_name }}"
+         tags:
+           - "metric=create_server"
+           - "az=default"
+         register: server
+
+       - name: Get server id
+         set_fact:
+          server_id: "{{ server.id }}"
+
+       - name: Create CES alarm 
+         opentelekomcloud.cloud.ces_alarms:
+           state: "present"
+           alarm_name: "{{ test_ces_alarm_name }}"
+           metric:
+             namespace: "SYS.ECS"
+             dimensions:
+               - name: "instance_id"
+                 value: "{{ server_id }}"
+             metric_name: "cpu_util"
+           condition:
+             period: 300
+             filter: average
+             comparison_operator: ">="
+             value: 5
+             unit: "%"
+             count: 1
+           alarm_enabled: false
+           alarm_action_enabled: false
+
+       - name: Switch CES alarm status
+         opentelekomcloud.cloud.ces_alarms:
+           state: "present"
+           alarm_name: "{{ test_ces_alarm_name }}"
+           switch_alarm_state: true
+
+       - name: List CES alarms
+         opentelekomcloud.cloud.ces_alarms_info:
+
+       - name: Get CES alarm info
+         opentelekomcloud.cloud.ces_alarms_info:
+           name: "{{ test_ces_alarm_name }}"
+       
+       - name: List CES metrics
+         opentelekomcloud.cloud.ces_metrics_info:
+
+       - name: GET CES metric info
+         opentelekomcloud.cloud.ces_metrics_info:
+           namespace: "SYS.ECS"
+           metric_name: "cpu_util"
+       
+       - name: GET CES quota info
+         opentelekomcloud.cloud.ces_quotas_info:
+     
+      always:
+
+        - block:
+
+            - name: Delete CES alarm 
+              opentelekomcloud.cloud.ces_alarms:
+                state: "absent"
+                alarm_name: "{{ test_ces_alarm_name }}"
+            
+            - name: Delete server
+              openstack.cloud.server:
+                state: absent
+                name: "{{ server_id | default(test_server_name) }}"
+                delete_fip: True
+              tags: ["metric=delete_server"]
+
+            - name: Delete VPC
+              include_role:
+                name: opentelekomcloud.vpc
+              vars:
+                router_name: "{{ test_router_name }}"
+                network_name: "{{ test_network_name }}"
+                subnet_name: "{{ test_subnet_name }}"
+                state: absent
+            
+            - name: Delete Keypair
+              include_role:
+                name: opentelekomcloud.keypair
+              vars:
+                keypair_name: "{{ test_keypair_name }}"
+                force_delete_key: true
+                state: "absent"
+
+          ignore_errors: true
