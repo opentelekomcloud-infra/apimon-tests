@@ -65,7 +65,7 @@
 
        - name: Get server id
          set_fact:
-          server_id: "{{ server.id }}"
+           server_id: "{{ server.id }}"
 
        - name: Create CES alarm 
          opentelekomcloud.cloud.ces_alarms:
@@ -86,11 +86,16 @@
              count: 1
            alarm_enabled: false
            alarm_action_enabled: false
+         register: alarm
+
+       - name: Get alarm id
+         set_fact:
+           alarm: "{{ alarm.alarms.id }}"
 
        - name: Switch CES alarm status
          opentelekomcloud.cloud.ces_alarms:
            state: "present"
-           alarm_name: "{{ test_ces_alarm_name }}"
+           alarm_name: "{{ alarm }}"
            switch_alarm_state: true
 
        - name: List CES alarms
@@ -98,7 +103,7 @@
 
        - name: Get CES alarm info
          opentelekomcloud.cloud.ces_alarms_info:
-           name: "{{ test_ces_alarm_name }}"
+           name: "{{ alarm }}"
        
        - name: List CES metrics
          opentelekomcloud.cloud.ces_metrics_info:
@@ -118,7 +123,7 @@
             - name: Delete CES alarm 
               opentelekomcloud.cloud.ces_alarms:
                 state: "absent"
-                alarm_name: "{{ test_ces_alarm_name }}"
+                alarm_name: "{{ alarm }}"
             
             - name: Delete server
               openstack.cloud.server:
