@@ -1,0 +1,37 @@
+---
+# tasks file for roles/backup_create_restore_delete
+
+- block:
+  - name: Create Backup in {{ availability_zone }}
+    opentelekomcloud.cloud.volume_backup:
+      volume: "{{ volume_name }}"
+      snapshot: "{{ snapshot_name }}"
+      display_name: "{{ backup_name }}"
+    tags: 'service=block_storage'
+    register: backup
+
+  - name: get backup id
+    set_fact:
+      backup_id: "{{ backup.id }}"
+
+  - name: Restore Backup in {{ availability_zone }}
+    script: "restore_backup.py {{backup_id}} {{volume_name}} {{ new_volume_name }}"
+    tags: 'service=block_storage'
+
+  - name: Get info about Backup in {{ availability_zone }}
+    script: "get_backup_info.py {{ backup_id }}"
+    register: backup
+    tags: 'service=block_storage'
+
+  always:
+    - name: Debug backup info
+      debug:
+        var: backup
+
+    - name: Delete Backup in {{ availability_zone}}
+      opentelekomcloud.cloud.volume_backup:
+        display_name: "{{ backup_name }}"
+        state: absent
+      tags: 'service=block_storage'
+      ignore_errors: True
+

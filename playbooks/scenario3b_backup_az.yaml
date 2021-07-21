@@ -1,0 +1,94 @@
+---
+
+- name: Scenario 3 - Backup per AZ
+  hosts: localhost
+  collections:
+    - opentelekomcloud.cloud
+  vars:
+    prefix: scenario3b-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        volume_suffix: "{{ (prefix + '-test_volume_apimon') }}"
+        snapshot_suffix: "{{ (prefix + '-test_snapshot_apimon') }}"
+        backup_suffix: "{{ (prefix + '-test_backup_apimon') }}"
+
+    - name: Rescue block
+      block:
+        - name: Get network facts
+          os_networks_facts:
+            name: admin_external_net
+
+        - set_fact:
+            network_azs: "{{ openstack_networks[0]['availability_zones'] }}"
+
+        - name: "Create Volume in {{item}}"
+          os_volume:
+            availability_zone: "{{ item }}"
+            size: 10
+            display_name: "{{ (item + '.' + volume_suffix) }}"
+          loop: "{{ network_azs }}"
+
+        - name: "Create Snapshot in {{item}}"
+          os_volume_snapshot:
+            display_name: "{{ (item + '.' + snapshot_suffix) }}"
+            volume: "{{ (item + '.' + volume_suffix) }}"
+          loop: "{{ network_azs }}"
+
+        - name: "Create Backup in {{item}}"
+          include_role:
+            name: backup_create_restore_delete
+          vars:
+            volume_name: "{{ (item + '.' + volume_suffix) }}"
+            new_volume_name: "{{ (volume_name + 'new') }}"
+            snapshot_name: "{{ (item + '.' + snapshot_suffix) }}"
+            backup_name: "{{ (item + '.' + backup_suffix) }}"
+            availability_zone: "{{ item }}"
+          loop: "{{ network_azs }}"
+
+      rescue:
+        - name: "Get info about Volume in {{item}}"
+          script: "get_volume_info.py {{ (item + '.' + volume_suffix) }}"
+          register: volume
+          tags: 'service=block_storage'
+          loop: "{{ network_azs }}"
+
+        - name: "Print Volume info in {{item}}"
+          debug:
+            var: "{{ ('volume_info_' + item + '.stdout') }}"
+          loop: "{{ network_azs }}"
+
+      always:
+        # If we failed - cleanup what we can
+        - name: "Delete original Snapshot in {{item}}"
+          vars:
+            volume_name: "{{ (item + '.' + volume_suffix) }}"
+            snapshot_name: "{{ (item + '.' + snapshot_suffix) }}"
+          os_volume_snapshot:
+            state: absent
+            display_name: "{{ snapshot_name }}"
+            volume: "{{volume_name}}"
+          ignore_errors: True
+          loop: "{{ network_azs }}"
+
+        - name: "Delete new Snapshot in {{item}}"
+          vars:
+            volume_name: "{{ (item + '.' + volume_suffix) }}"
+            snapshot_name: "{{ (item + '.' + snapshot_suffix) }}"
+          os_volume_snapshot:
+            state: absent
+            display_name: "{{ (snapshot_name + '_new') }}"
+            volume: "{{volume_name}}"
+          ignore_errors: True
+          loop: "{{ network_azs }}"
+
+        - name: "Delete Volume in {{item}}"
+          vars:
+            volume_name: "{{ (item + '.' + volume_suffix) }}"
+          os_volume:
+            state: absent
+            display_name: "{{volume_name}}"
+          ignore_errors: True
+          loop: "{{ network_azs }}"
