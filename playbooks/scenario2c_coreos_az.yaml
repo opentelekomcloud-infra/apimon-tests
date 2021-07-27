@@ -60,7 +60,7 @@
         - name: Create SG
           openstack.cloud.security_group:
             name: "{{ test_security_group_name }}"
-            description: "SG for scenario2c {{prefix}} run"
+            description: "SG for scenario2c {{ prefix }} run"
 
         - name: Create SG-Rule
           openstack.cloud.security_group_rule:

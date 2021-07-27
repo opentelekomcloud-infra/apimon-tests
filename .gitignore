@@ -7,3 +7,5 @@ playbooks/install/credentials/*
 *.swo
 **/*.swp
 **/*.swo
+*.egg
+opentelekomcloud_infra_apimon_tests.egg-info*

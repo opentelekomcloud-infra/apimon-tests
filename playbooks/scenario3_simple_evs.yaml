@@ -27,7 +27,7 @@
             state: present
             #availability_zone: eu-de-01
             size: 10
-            display_name: "{{volume_name}}"
+            display_name: "{{ volume_name }}"
 
         - name: List Snapshots
           openstack.cloud.volume_snapshot_info:
@@ -36,8 +36,8 @@
         - name: Create snapshot
           openstack.cloud.volume_snapshot:
             state: present
-            display_name: "{{snapshot_name}}"
-            volume: "{{volume_name}}"
+            display_name: "{{ snapshot_name }}"
+            volume: "{{ volume_name }}"
             timeout: 1800
           register: snapshot
           tags: ["metric=create_volume_snapshot"]
@@ -73,7 +73,7 @@
             - "az=default"
 
         - name: Restore backup
-          script: "restore_backup.py {{backup_name}} {{volume_name}} {{ (volume_name + 'new') }}"
+          script: "restore_backup.py {{ backup_name }} {{ volume_name }} {{ (volume_name + 'new') }}"
           args:
             executable: python3
           tags:
@@ -81,7 +81,7 @@
             - "metric=restore_volume_backup"
 
         - name: Modify snapshot
-          script: "modify_snapshot.py {{snapshot_name}} {{ (snapshot_name + '_new') }}"
+          script: "modify_snapshot.py {{ snapshot_name }} {{ (snapshot_name + '_new') }}"
           args:
             executable: python3
           tags: 'service=block_storage'
@@ -133,7 +133,7 @@
               openstack.cloud.volume_snapshot:
                 state: absent
                 display_name: "{{ snapshot_name }}"
-                volume: "{{volume_name}}"
+                volume: "{{ volume_name }}"
                 timeout: 1800
               tags:
                 - "metric=delete_volume_snapshot"
@@ -142,7 +142,7 @@
               openstack.cloud.volume_snapshot:
                 state: absent
                 display_name: "{{ (snapshot_name + '_new') }}"
-                volume: "{{volume_name}}"
+                volume: "{{ volume_name }}"
                 timeout: 1800
 
               # NOTE(gtema): metrics with same name will me merged together,
@@ -151,7 +151,7 @@
             - name: Delete Volume
               openstack.cloud.volume:
                 state: absent
-                display_name: "{{volume_name}}"
+                display_name: "{{ volume_name }}"
               tags:
                 - "metric=delete_volume"
           ignore_errors: True

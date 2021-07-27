@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+from ansible.module_utils.apimon_module import ApimonModule
+
+import requests
+
 DOCUMENTATION = r'''
 ---
 module: apimon_latency
@@ -28,11 +32,6 @@ EXAMPLES = r'''
 
 RETURN = r'''
 '''
-
-
-from ansible.module_utils.apimon_module import ApimonModule
-
-import requests
 
 
 class ApimonLatency(ApimonModule):

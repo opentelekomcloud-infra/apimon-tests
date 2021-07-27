@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import openstack
-import logging
 import sys
 
 conn = openstack.connect()

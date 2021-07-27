@@ -4,9 +4,9 @@ import openstack
 import sys
 
 conn = openstack.connect()
-#openstack.enable_logging(debug=True, http_debug=True)
+# openstack.enable_logging(debug=True, http_debug=True)
 
 container_name = sys.argv[1]
 
-#get container
+# get container
 conn.obs.get_container(container_name)

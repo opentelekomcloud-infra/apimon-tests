@@ -158,7 +158,7 @@
       - name: Try connecting
         retries: 10
         delay: 1
-        command: "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' linux@{{server_ip}} -i ~/.ssh/{{test_keypair_name}}.pem"
+        command: "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' linux@{{ server_ip }} -i ~/.ssh/{{ test_keypair_name }}.pem"
         tags: ["az=default", "service=compute", "metric=create_server"]
 
       ############
