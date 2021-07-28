@@ -1,5 +1,12 @@
 #!/usr/bin/python
 
+from ansible.module_utils.apimon_module import ApimonModule
+
+import socket
+import time
+
+import dns.resolver
+import dns.exception
 __metaclass__ = type
 
 DOCUMENTATION = r'''
@@ -28,15 +35,6 @@ EXAMPLES = r'''
 
 RETURN = r'''
 '''
-
-
-from ansible.module_utils.apimon_module import ApimonModule
-
-import socket
-import time
-
-import dns.resolver
-import dns.exception
 
 
 class ApimonNsLookup(ApimonModule):

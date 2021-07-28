@@ -1,0 +1,11 @@
+- project:
+    merge-mode: squash-merge
+    check:
+      jobs:
+        - otc-tox-linters
+    check-post:
+      jobs:
+        - otc-tox-linters
+    gate:
+      jobs:
+        - otc-tox-linters

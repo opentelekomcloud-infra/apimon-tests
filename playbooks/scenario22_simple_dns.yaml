@@ -11,8 +11,8 @@
 
     - name: Try dig open-telekom-cloud.com
       set_fact:
-        otc_dns: "{{ lookup('dig', 'open-telekom-cloud.com.')}}"
-        openstack_dns: "{{ lookup('dig', 'openstack.org')}}"
+        otc_dns: "{{ lookup('dig', 'open-telekom-cloud.com.') }}"
+        openstack_dns: "{{ lookup('dig', 'openstack.org') }}"
         zone_name: "{{ prefix }}apimon.tsi.org."
 
     - block:

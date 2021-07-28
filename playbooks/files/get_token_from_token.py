@@ -103,9 +103,9 @@ def main():
     dummy_get(conn, token1_from_token_id)
     dummy_get(conn, token2_from_token_id)
     # Ensure we can stil get another token from 1st token
-    #token3_from_token_id, rsp = get_token_from_token(conn, token1_id)
+    # token3_from_token_id, rsp = get_token_from_token(conn, token1_id)
 
-    #revoke_token(conn, token3_from_token_id)
+    # revoke_token(conn, token3_from_token_id)
     revoke_token(conn, token2_from_token_id)
     revoke_token(conn, token1_from_token_id)
     revoke_token(conn, token2_id)

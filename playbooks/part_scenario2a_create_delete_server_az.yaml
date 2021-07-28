@@ -3,7 +3,7 @@
 - name: Create/Delete VM
   hosts: localhost
   tasks:
-    - name: Create server in {{az}}
+    - name: Create server in {{ az }}
       include_role:
         name: opentelekomcloud.bastion
  

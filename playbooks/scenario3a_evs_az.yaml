@@ -26,5 +26,5 @@
           volume_name: "{{ (item['name'] + '.' + test_volume_name) }}"
           availability_zone: "{{ item['name'] }}"
           size: 10
-          display_name: "{{volume_name}}"
+          display_name: "{{ volume_name }}"
         loop: "{{ azs['availability_zones'] }}"

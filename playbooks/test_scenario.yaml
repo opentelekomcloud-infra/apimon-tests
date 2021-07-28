@@ -25,7 +25,7 @@
       - wait_for:
           port: 22
           host: localhost
-        tags: "az={{azi}}"
+        tags: "az={{ azi }}"
       rescue:
         - debug:
             msg: "rescued"

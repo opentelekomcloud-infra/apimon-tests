@@ -17,44 +17,44 @@
     - block:
 
       - name: Create Container
-        script: "create_container.py {{container_name}} "
+        script: "create_container.py {{ container_name }} "
         args:
           executable: python3
 
       - name: Get Container
-        script: "get_container.py {{container_name}} "
+        script: "get_container.py {{ container_name }} "
         args:
           executable: python3
 
       - name: Create Object
-        script: "create_object.py {{container_name}} {{object_name}} "
+        script: "create_object.py {{ container_name }} {{ object_name }} "
         args:
           executable: python3
 
       - name: Get Object
-        script: "get_object.py {{container_name}} {{object_name}} "
+        script: "get_object.py {{ container_name }} {{ object_name }} "
         args:
           executable: python3
 
       - name: Delete Object
-        script: "delete_object.py {{container_name}} {{object_name}} "
+        script: "delete_object.py {{ container_name }} {{ object_name }} "
         args:
           executable: python3
 
       - name: Delete Container
-        script: "delete_container.py {{container_name}} "
+        script: "delete_container.py {{ container_name }} "
         args:
           executable: python3
 
       always:
         - block:
             - name: Delete Object
-              script: "delete_object.py {{container_name}} {{object_name}} "
+              script: "delete_object.py {{ container_name }} {{ object_name }} "
               args:
                 executable: python3
 
             - name: Delete Container
-              script: "delete_container.py {{container_name}} "
+              script: "delete_container.py {{ container_name }} "
               args:
                 executable: python3
           ignore_errors: true

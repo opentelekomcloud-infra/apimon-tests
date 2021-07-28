@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
 import openstack
-import logging
 import sys
 
-#openstack.enable_logging(debug=True, http_debug=True)
+# openstack.enable_logging(debug=True, http_debug=True)
 
 fipid = sys.argv[1]
 
