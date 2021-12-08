@@ -1,0 +1,86 @@
+---
+
+# Scenario to test OTC Internal DNS
+- name: Scenario 22a - Internal DNS
+  hosts: localhost
+  vars:
+    prefix: scenario22a-
+  tasks:
+    - set_fact:
+       prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - name: Set fact required for the Testcase
+      set_fact:
+        zone_name: "{{ prefix }}apimon.tsi.org."
+        test_router_name: "{{ prefix }}-vpc"
+        test_network_name: "{{ prefix }}-network"
+        test_subnet_name: "{{ prefix }}-subnet"
+
+    - block:
+      
+      - name: Create VPC (Router + Net + Subnet)
+        include_role:
+          name: opentelekomcloud.vpc
+        vars:
+          router_name: "{{ test_router_name }}"
+          network_name: "{{ test_network_name }}"
+          subnet_name: "{{ test_subnet_name }}"
+          state: present
+
+      - name: Create private zone
+        opentelekomcloud.cloud.dns_zone:
+          name: "{{ zone_name }}"
+          state: present
+          zone_type: "private"
+          router: "{{ test_router_name }}"
+        register: zone
+
+      - name: Update private zone
+        opentelekomcloud.cloud.dns_zone:
+          name: "{{ zone_name }}"
+          state: present
+          zone_type: "private"
+          router: "{{ test_router_name }}"
+          ttl: 5000
+          description: "This is updated zone description"
+
+      - name: Create recordset in private zone
+        opentelekomcloud.cloud.dns_recordset:
+          zone_id: "{{ zone.zone.id }}"
+          state: present
+          type: A
+          records: ['10.0.1.1']
+          recordset_name: "a1.{{ zone_name }}"
+      
+      - name: Update recordset in private zone
+        opentelekomcloud.cloud.dns_recordset:
+          zone_id: "{{ zone.zone.id }}"
+          state: present
+          type: A
+          records: ['10.0.1.1']
+          recordset_name: "a1.{{ zone_name }}"
+          ttl: 5000
+          description: "This is updated recordset description"
+
+      - name: Delete recordset in private zone
+        opentelekomcloud.cloud.dns_recordset:
+          zone_id: "{{ zone.zone.id }}"
+          state: absent
+          recordset_name: "a1.{{ zone_name }}"
+
+      always:
+
+        - name: Delete private zone
+          opentelekomcloud.cloud.dns_zone:
+            name: "{{ zone_name }}"
+            state: absent
+            zone_type: "private"
+
+        - name: Delete VPC
+          include_role:
+            name: opentelekomcloud.vpc
+          vars:
+            router_name: "{{ test_router_name }}"
+            network_name: "{{ test_network_name }}"
+            subnet_name: "{{ test_subnet_name }}"
+            state: absent
