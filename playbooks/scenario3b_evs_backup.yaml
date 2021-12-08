@@ -1,9 +1,9 @@
 ---
 
-- name: Scenario 3 - basic storage functionality
+- name: Scenario 3b - basic storage functionality with backup
   hosts: localhost
   vars:
-    prefix: scenario3-
+    prefix: scenario3b-
   tasks:
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
@@ -53,6 +53,30 @@
             that:
               - snapshot_info.volume_snapshots[0].status == 'available'
 
+        - name: List Backups
+          openstack.cloud.volume_backup_info:
+          tags: 'service=block_storage'
+
+        - name: Create backup
+          openstack.cloud.volume_backup:
+            state: "present"
+            display_name: "{{ backup_name }}"
+            volume: "{{ volume_name }}"
+            snapshot: "{{ snapshot_name }}"
+            timeout: 1800
+          tags:
+            - "service=block_storage"
+            - "metric=create_volume_backup"
+            - "az=default"
+
+        - name: Restore backup
+          script: "restore_backup.py {{ backup_name }} {{ volume_name }} {{ (volume_name + 'new') }}"
+          args:
+            executable: python3
+          tags:
+            - "service=block_storage"
+            - "metric=restore_volume_backup"
+
         - name: Modify snapshot
           script: "modify_snapshot.py {{ snapshot_name }} {{ (snapshot_name + '_new') }}"
           args:
@@ -60,6 +84,16 @@
           tags: 'service=block_storage'
 
       rescue:
+        - name: Get info about backup
+          openstack.cloud.volume_backup_info:
+            name: "{{ backup_name }}"
+          register: backup_info
+          tags: 'service=block_storage'
+
+        - name: Print backup info
+          debug:
+            var: backup_info
+
         - name: Get info about snapshot
           openstack.cloud.volume_snapshot_info:
             name: "{{ snapshot_name }}"
@@ -83,6 +117,15 @@
       always:
         # If we failed - cleanup what we can
         - block:
+            - name: Delete backup
+              openstack.cloud.volume_backup:
+                state: "absent"
+                display_name: "{{ backup_name }}"
+                timeout: 1800
+              tags:
+                - "service=block_storage"
+                - "metric=delete_volume_backup"
+
             - name: Delete original snapshot
               openstack.cloud.volume_snapshot:
                 state: absent
