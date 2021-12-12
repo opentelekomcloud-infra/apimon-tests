@@ -17,7 +17,7 @@
         test_subnet_name: "{{ prefix }}-subnet"
 
     - block:
-      
+
       - name: Create VPC (Router + Net + Subnet)
         include_role:
           name: opentelekomcloud.vpc
@@ -51,7 +51,7 @@
           type: A
           records: ['10.0.1.1']
           recordset_name: "a1.{{ zone_name }}"
-      
+
       - name: Update recordset in private zone
         opentelekomcloud.cloud.dns_recordset:
           zone_id: "{{ zone.zone.id }}"
@@ -84,3 +84,7 @@
             network_name: "{{ test_network_name }}"
             subnet_name: "{{ test_subnet_name }}"
             state: absent
+
+        - name: Pause for 5 minutes to give platform time to recover
+          pause:
+            minutes: 5

@@ -42,3 +42,7 @@
           openstack.cloud.dns_zone:
             name: "{{ zone_name }}"
             state: absent
+
+        - name: Pause for 5 minutes to give platform time to recover
+          pause:
+            minutes: 5
