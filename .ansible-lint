@@ -37,6 +37,8 @@ skip_list:
   - trailing-spaces
   - experimental  # experimental is included in the implicit list
   - metadata
+  - fqcn-builtins  # Use FQCN for builtin actions.
+  - no-changed-when  # Commands should not change things if nothing needs doing.
 
 # Any rule that has the 'opt-in' tag will not be loaded unless its 'id' is
 # mentioned in the enable_list:
