@@ -8,6 +8,9 @@ order: 10
 #        mode: "none"}, thresholdsStyle: {mode: "off"}}, decimals: 0, mappings: [],
 #    min: 0, thresholds: {mode: "absolute", steps: [{color: "green", value: null},
 #        {color: "red", value: 80}]}, unit: "ms"}, overrides: []}
+gridPos:
+  w: 24
+  h: 6
 options:
   legend: {calcs: ["min", "mean", "max"], displayMode: "table", placement: "right"}
   tooltip: {mode: "single", sort: "none"}
