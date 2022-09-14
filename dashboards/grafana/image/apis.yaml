@@ -1,16 +1,8 @@
 ---
 order: 10
-#fieldConfig: {defaults: {color: {mode: "palette-classic"}, custom: {axisLabel: "",
-#      axisPlacement: "auto", barAlignment: 0, drawStyle: "line", fillOpacity: 10,
-#      gradientMode: "none", hideFrom: {legend: false, tooltip: false, viz: false},
-#      lineInterpolation: "linear", lineWidth: 1, pointSize: 5, scaleDistribution: {
-#        type: "linear"}, showPoints: "never", spanNulls: true, stacking: {group: "A",
-#        mode: "none"}, thresholdsStyle: {mode: "off"}}, decimals: 0, mappings: [],
-#    min: 0, thresholds: {mode: "absolute", steps: [{color: "green", value: null},
-#        {color: "red", value: 80}]}, unit: "ms"}, overrides: []}
 gridPos:
   w: 24
-  h: 6
+  h: 8
 options:
   legend: {calcs: ["min", "mean", "max"], displayMode: "table", placement: "right"}
   tooltip: {mode: "single", sort: "none"}
