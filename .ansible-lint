@@ -61,6 +61,8 @@ warn_list:
   - no-handler
   - var-naming
   - yaml
+  - jinja[spacing]
+  - name[casing]
 
 # Offline mode disables installation of requirements.yml
 offline: false

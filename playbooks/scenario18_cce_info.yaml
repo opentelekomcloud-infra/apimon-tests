@@ -1,6 +1,6 @@
 ---
 
-- name: Scenario 18 - CCE Info
+- name: Scenario 18 - CCE Cluster Info
   hosts: localhost
   tasks:
 
