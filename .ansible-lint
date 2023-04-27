@@ -51,6 +51,22 @@ skip_list:
   - truthy
   - casing
   - keyword
+  - key-order[task]
+  - jinja[spacing]
+  - name[missing]
+  - yaml[colons]
+  - yaml[comments]
+  - yaml[empty-lines]
+  - yaml[indentation]
+  - yaml[line-length]
+  - yaml[octal-values]
+  - yaml[trailing-spaces]
+  - yaml[truthy]
+  - name[casing]
+  - risky-file-permissions
+  - ignore-errors
+  - no-handler
+  - fqcn[keyword]
 
 # Any rule that has the 'opt-in' tag will not be loaded unless its 'id' is
 # mentioned in the enable_list:
