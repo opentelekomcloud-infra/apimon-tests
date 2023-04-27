@@ -13,7 +13,7 @@
         test_security_group_name: "{{ (prefix + '-sg') }}"
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_network_name: "{{ ( prefix + '-net') }}"
-        test_image: Standard_Fedora_35_latest
+        test_image: Standard_Fedora_37_latest
 
     - name: Query specific flavor
       openstack.cloud.compute_flavor_info:
