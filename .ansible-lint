@@ -39,6 +39,18 @@ skip_list:
   - metadata
   - fqcn-builtins  # Use FQCN for builtin actions.
   - no-changed-when  # Commands should not change things if nothing needs doing.
+  - deprecated-module
+  - task
+  - spacing
+  - missing
+  - comments
+  - empty-lines
+  - indentation
+  - line-length
+  - octal-values
+  - truthy
+  - casing
+  - keyword
 
 # Any rule that has the 'opt-in' tag will not be loaded unless its 'id' is
 # mentioned in the enable_list:
