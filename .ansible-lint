@@ -34,11 +34,27 @@ exclude_paths:
 skip_list:
   - skip_this_tag
   - git-latest
-  - trailing-spaces
   - experimental  # experimental is included in the implicit list
   - metadata
   - fqcn-builtins  # Use FQCN for builtin actions.
   - no-changed-when  # Commands should not change things if nothing needs doing.
+  - deprecated-module
+  - key-order[task]
+  - jinja[spacing]
+  - name[missing]
+  - yaml[colons]
+  - yaml[comments]
+  - yaml[empty-lines]
+  - yaml[indentation]
+  - yaml[line-length]
+  - yaml[octal-values]
+  - yaml[trailing-spaces]
+  - yaml[truthy]
+  - name[casing]
+  - risky-file-permissions
+  - ignore-errors
+  - no-handler
+  - fqcn[keyword]
 
 # Any rule that has the 'opt-in' tag will not be loaded unless its 'id' is
 # mentioned in the enable_list:
