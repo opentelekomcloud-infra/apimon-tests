@@ -9,4 +9,4 @@ conn = openstack.connect()
 container_name = sys.argv[1]
 
 # delete container
-conn.obs.delete_container(container_name, ignore_missing=True)
+conn.object_store.delete_container(container_name, ignore_missing=True)

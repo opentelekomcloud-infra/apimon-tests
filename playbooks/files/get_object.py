@@ -10,4 +10,4 @@ container_name = sys.argv[1]
 object_name = sys.argv[2]
 
 # get object
-conn.obs.get_object(object_name, container=container_name)
+conn.object_store.get_object(object_name, container=container_name)

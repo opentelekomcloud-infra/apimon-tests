@@ -9,4 +9,4 @@ conn = openstack.connect()
 container_name = sys.argv[1]
 
 # get container
-conn.obs.get_container(container_name)
+conn.object_store.get_container_metadata(container_name)

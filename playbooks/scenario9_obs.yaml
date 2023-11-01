@@ -12,7 +12,7 @@
 
     - set_fact:
         container_name: "{{ (prefix + '-apimon') }}"
-        object_name: "{{ (prefix + 'test-object-apimon') }}"
+        object_name: "scenario9_obs.yaml"
 
     - block:
 

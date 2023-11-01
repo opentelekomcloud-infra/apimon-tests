@@ -10,5 +10,5 @@ container_name = sys.argv[1]
 object_name = sys.argv[2]
 
 # delete object
-conn.obs.delete_object(object_name, container=container_name,
+conn.object_store.delete_object(object_name, container=container_name,
                        ignore_missing=True)

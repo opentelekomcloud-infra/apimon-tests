@@ -10,4 +10,4 @@ container_name = sys.argv[1]
 
 # create container
 headers = {'x-amz-acl': 'public-read'}
-conn.obs.create_container(name=container_name, headers=headers)
+conn.object_store.create_container(name=container_name, headers=headers)

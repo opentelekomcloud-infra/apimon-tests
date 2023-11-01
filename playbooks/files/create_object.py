@@ -10,4 +10,4 @@ container_name = sys.argv[1]
 object_name = sys.argv[2]
 
 # create object
-conn.obs.create_object(container_name, name=object_name)
+conn.object_store.create_object(container=container_name, name=object_name)
