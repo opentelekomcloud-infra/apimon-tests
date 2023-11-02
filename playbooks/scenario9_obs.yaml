@@ -12,9 +12,15 @@
 
     - set_fact:
         container_name: "{{ (prefix + '-apimon') }}"
-        object_name: "scenario9_obs.yaml"
+        object_name: "{{ (prefix + '-object-apimon') }}"
 
     - block:
+
+      - name: Create file for object
+        ansible.builtin.file:
+          path: "./{{ object_name }}.txt"
+          state: touch
+          mode: u=rw,g=r,o=r
 
       - name: Create Container
         script: "create_container.py {{ container_name }} "
@@ -27,12 +33,12 @@
           executable: python3
 
       - name: Create Object
-        script: "create_object.py {{ container_name }} {{ object_name }} "
+        script: "create_object.py {{ container_name }} ./{{ object_name }}.txt "
         args:
           executable: python3
 
       - name: Get Object
-        script: "get_object.py {{ container_name }} {{ object_name }} "
+        script: "get_object.py {{ container_name }} ./{{ object_name }}.txt "
         args:
           executable: python3
 
@@ -57,4 +63,10 @@
               script: "delete_container.py {{ container_name }} "
               args:
                 executable: python3
+
+            - name: Delete file for object
+              ansible.builtin.file:
+                path: "./{{ object_name }}.txt"
+                state: absent
+
           ignore_errors: true
