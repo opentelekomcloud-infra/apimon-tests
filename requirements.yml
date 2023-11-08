@@ -1,5 +1,6 @@
 ---
 roles:
+  - name: opentelekomcloud.vpc
   - name: opentelekomcloud.keypair
   - name: opentelekomcloud.bastion
   - name: opentelekomcloud.server_common
