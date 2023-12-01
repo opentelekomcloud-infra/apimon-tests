@@ -1,8 +1,13 @@
+- job:
+    name: otc-tox-linters-test
+    parent: otc-tox-linters
+    nodeset: ubuntu-focal
+
 - project:
     merge-mode: squash-merge
     check:
       jobs:
-        - otc-tox-linters
+        - otc-tox-linters-test
     check-post:
       jobs:
         - otc-tox-linters
