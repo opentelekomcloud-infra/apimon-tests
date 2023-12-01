@@ -1,13 +1,8 @@
-- job:
-    name: otc-tox-linters-test
-    parent: otc-tox-linters
-    nodeset: ubuntu-jammy
-
 - project:
     merge-mode: squash-merge
     check:
       jobs:
-        - otc-tox-linters-test
+        - otc-tox-linters
     check-post:
       jobs:
         - otc-tox-linters

@@ -2,7 +2,7 @@
 # tasks file for otc-vpc-role
 # Create
 - block:
-  - include: "{{ net_task }}.yaml"
+  - ansible.builtin.include_tasks: "{{ net_task }}.yaml"
     loop_control:
       loop_var: net_task
     with_items: "{{ task_manager }}"
@@ -18,7 +18,7 @@
 
 # Remove
 - block:
-  - include: "{{ net_task }}.yaml"
+  - ansible.builtin.include_tasks: "{{ net_task }}.yaml"
     loop_control:
       loop_var: net_task
     with_items: "{{ task_manager | reverse | list }}"
