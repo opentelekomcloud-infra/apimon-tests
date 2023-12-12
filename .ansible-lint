@@ -55,7 +55,6 @@ skip_list:
   - ignore-errors
   - no-handler
   - fqcn[keyword]
-  - var-naming[no-role-prefix]
 
 # Any rule that has the 'opt-in' tag will not be loaded unless its 'id' is
 # mentioned in the enable_list:
