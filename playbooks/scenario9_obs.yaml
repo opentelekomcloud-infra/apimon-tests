@@ -44,6 +44,10 @@
 
       always:
         - block:
+            - name: Delete file for object
+              ansible.builtin.file:
+                path: "./{{ object_name }}.txt"
+                state: absent
 
             - name: Delete Object
               script: "delete_object.py {{ container_name }} {{ object_name }}.txt "
