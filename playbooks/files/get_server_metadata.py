@@ -8,4 +8,4 @@ conn = openstack.connect()
 server = conn.compute.find_server(sys.argv[1])
 
 if server:
-    metadata = server.get_metadata(conn.compute)
+    metadata = conn.compute.get_server_metadata(server=server)
