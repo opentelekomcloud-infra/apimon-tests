@@ -45,6 +45,7 @@ class ApimonLatency(ApimonModule):
 
     def perform_request(self, host, name, timeout):
         result = None
+        metric_name = None
         try:
             rsp = requests.get(host, timeout=timeout)
             duration = rsp.elapsed.total_seconds() * 1000
