@@ -25,4 +25,3 @@ instance = conn.dcs.create_instance(
     subnet_id=subnet_id,
     vpc_id=vpc_id
 )
-#print(instance)

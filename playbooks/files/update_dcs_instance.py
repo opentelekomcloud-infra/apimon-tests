@@ -13,4 +13,3 @@ attrs = {
 
 instance = conn.dcs.find_instance(instance_name)
 conn.dcs.update_instance(instance, **attrs)
-#print(instance)
