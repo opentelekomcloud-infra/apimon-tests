@@ -20,7 +20,7 @@
 
   - name: get server id
     set_fact:
-      server_id: "{{ server.id }}"
+      server_id: "{{ server.server.id }}"
   
   - name: Attach FIP
     openstack.cloud.floating_ip:
@@ -38,7 +38,7 @@
       - "az={{ availability_zone }}"
   
   - set_fact:
-      server_ip: "{{ server['openstack_servers'][0]['public_v4'] }}"
+      server_ip: "{{ server['servers'][0]['access_ipv4'] }}"
     tags: 
       - "metric=create_server{{ metric_suffix }}"
       - "az={{ availability_zone }}"
@@ -85,4 +85,4 @@
 
     - assert:
         that:
-          - server.openstack_servers | length == 0
+          - server.servers | length == 0
