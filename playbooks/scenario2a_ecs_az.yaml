@@ -34,7 +34,7 @@
     - block:
 
       - name: Create KeyPair
-        os_keypair:
+        openstack.cloud.keypair:
           state: present
           name: "{{ test_keypair_name }}"
         register: keypair_output
@@ -98,7 +98,7 @@
                 network_name: "{{ test_network_name }}"
 
             - name: Delete KeyPair
-              os_keypair:
+              openstack.cloud.keypair:
                 state: absent
                 name: "{{ test_keypair_name }}"
 

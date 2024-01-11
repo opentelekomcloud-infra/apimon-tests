@@ -14,6 +14,7 @@
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_network_name: "{{ ( prefix + '-net') }}"
         test_image: Standard_Fedora_37_latest
+        test_flavor: s2.medium.2
         keypair_private_key_dest: "{{ ('~/.ssh/' + (prefix + '-kp') + '.pem') }}"
 
     - name: Query specific flavor
@@ -43,7 +44,7 @@
     - block:
 
       - name: Create KeyPair
-        os_keypair:
+        openstack.cloud.keypair:
           state: present
           name: "{{ test_keypair_name }}"
         register: keypair_output
@@ -230,7 +231,7 @@
                 network_name: "{{ test_network_name }}"
 
             - name: Delete KeyPair
-              os_keypair:
+              openstack.cloud.keypair:
                 state: absent
                 name: "{{ test_keypair_name }}"
 
