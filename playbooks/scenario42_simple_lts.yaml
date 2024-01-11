@@ -1,0 +1,38 @@
+---
+
+# Scenario 42: LTS
+#
+- name: Scenario 42 - basic lts functionality
+  hosts: localhost
+  vars:
+    prefix: scenario42-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) )[0:24] }}"
+
+    - set_fact:
+        loggroup_name: "{{ (prefix + '-lts_loggroup_apimon') }}"
+
+    - block:
+      - name: Create LTS log group
+        script: "create_lts_loggroup.py {{ loggroup_name }}"
+        args:
+          executable: python3
+        register: result
+
+      - name: Get log group id
+        set_fact:
+          loggroup_id: "{{ result.stdout.strip() }}"
+
+      - name: Update LTS log group
+        script: "update_lts_loggroup.py {{ loggroup_id }}"
+        args:
+          executable: python3
+
+      always:
+        - block:
+          - name: Delete LTS log group
+            script: "delete_lts_loggroup.py {{ loggroup_id }}"
+            args:
+              executable: python3
+          ignore_errors: true
