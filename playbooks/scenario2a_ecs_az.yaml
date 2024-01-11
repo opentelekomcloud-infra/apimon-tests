@@ -18,6 +18,8 @@
         test_security_group_name: "{{ (prefix + '-sg') }}"
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_network_name: "{{ ( prefix + '-net') }}"
+        test_flavor: s2.medium.2
+        keypair_private_key_dest: "{{ ('~/.ssh/' + (prefix + '-kp') + '.pem') }}"
 
     - name: Query specific flavor
       openstack.cloud.compute_flavor_info:
@@ -27,15 +29,21 @@
     # using s2.medium.2 as fallback in case the flavor from inv is not available in the env
     - set_fact:
         test_flavor: s2.medium.2
-      when: flavor_result.openstack_flavors | length==0
+      when: flavor_result.flavors | length==0
 
     - block:
 
-      - name: Create Keypair
-        include_role:
-          name: keypair
-        vars:
-          keypair_name: "{{ test_keypair_name }}"
+      - name: Create KeyPair
+        openstack.cloud.keypair:
+          state: present
+          name: "{{ test_keypair_name }}"
+        register: keypair_output
+
+      - name: Save private key
+        copy:
+          dest: "{{ keypair_private_key_dest }}"
+          content: "{{ keypair_output['keypair']['private_key'] }}"
+          mode: 0600
 
       - name: Create VPC
         include_role:
@@ -89,13 +97,15 @@
                 state: absent
                 network_name: "{{ test_network_name }}"
 
-            - name: Delete KP
-              include_role:
-                name: keypair
-              vars:
-                keypair_name: "{{ test_keypair_name }}"
+            - name: Delete KeyPair
+              openstack.cloud.keypair:
                 state: absent
-                force_delete_key: true
+                name: "{{ test_keypair_name }}"
+
+            - name: delete private key
+              file:
+                path: "{{ keypair_private_key_dest }}"
+                state: absent
 
             - name: Pause for 5 minutes to give Neutron time
               pause:
