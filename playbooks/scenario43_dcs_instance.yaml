@@ -14,6 +14,14 @@
         test_security_group_name: "{{ (prefix + '-sg') }}"
         test_vpc_name: "{{ ( prefix + '-vpc') }}"
         dcs_inst_name: "{{ (prefix + '-dcs_instance_apimon') }}"
+        dcs_inst_pw: "{{ lookup('ansible.builtin.password', '/dev/null', length=15, chars=['ascii_letters', 'digits', '.,:-_']) }}"
+
+    - name: Get Availability zones
+      opentelekomcloud.cloud.availability_zone_info:
+      register: azs
+
+    - name: Get AZ name (currently eu-de-03)
+      set_fact: az_name="{{ azs | json_query('availability_zones[2].name')|trim}}"
 
     - block:
       - name: Create VPC
@@ -36,7 +44,7 @@
          subnet_id: "{{ net_network.id }}"
 
       - name: Create DCS Instance
-        script: "create_dcs_instance.py {{ dcs_inst_name }} {{ vpc_id }} {{ subnet_id }} {{ sg_id }}"
+        script: "create_dcs_instance.py {{ dcs_inst_name }} {{ vpc_id }} {{ subnet_id }} {{ sg_id }} {{ dcs_inst_pw }} {{ az_name }}"
         args:
           executable: python3
 
