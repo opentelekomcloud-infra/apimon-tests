@@ -16,12 +16,15 @@
         dcs_inst_name: "{{ (prefix + '-dcs_instance_apimon') }}"
         dcs_inst_pw: "{{ lookup('ansible.builtin.password', '/dev/null', length=15, chars=['ascii_letters', 'digits', '.,:-_']) }}"
 
-    - name: Get Availability zones
-      opentelekomcloud.cloud.availability_zone_info:
+    - name: Get DCS Availability zones
+      script: "list_dcs_az.py"
+      args:
+        executable: python3
       register: azs
 
-    - name: Get AZ name (currently eu-de-03)
-      set_fact: az_name="{{ azs | json_query('availability_zones[2].name')|trim}}"
+    - name: Get AZ name 
+      set_fact:
+        az_name: "{{ azs.stdout_lines[2] }}"
 
     - block:
       - name: Create VPC
