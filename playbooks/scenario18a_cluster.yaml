@@ -90,7 +90,7 @@
 
       always:
         - block:
-          - name: Create Keypair
+          - name: Delete Keypair
             include_role:
               name: opentelekomcloud.keypair
             vars:
