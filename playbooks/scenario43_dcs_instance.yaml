@@ -24,7 +24,7 @@
 
     - name: Get AZ name 
       set_fact:
-        az_name: "{{ azs.stdout_lines[2] }}"
+        az_name: "{{ azs.stdout_lines[-1] }}"
 
     - block:
       - name: Create VPC

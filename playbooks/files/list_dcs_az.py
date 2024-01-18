@@ -4,5 +4,5 @@ import openstack
 
 conn = openstack.connect()
 
-for az in  conn.dcs.availability_zones():
+for az in conn.dcs.availability_zones():
   print(az.name)
