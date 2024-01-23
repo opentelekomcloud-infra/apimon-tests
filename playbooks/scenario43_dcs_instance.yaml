@@ -1,0 +1,93 @@
+---
+
+# Scenario 43: Create, List, Update, Delete DCS Instance
+#
+- name: Scenario 43 - DCS Instance
+  hosts: localhost
+  vars:
+    prefix: scenario43-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) )[0:24] }}"
+
+    - set_fact:
+        test_security_group_name: "{{ (prefix + '-sg') }}"
+        test_vpc_name: "{{ ( prefix + '-vpc') }}"
+        dcs_inst_name: "{{ (prefix + '-dcs_instance_apimon') }}"
+        dcs_inst_pw: "{{ lookup('ansible.builtin.password', '/dev/null', length=15, chars=['ascii_letters', 'digits', '.,:-_']) }}"
+
+    - name: Get DCS Availability zones
+      script: "list_dcs_az.py"
+      args:
+        executable: python3
+      register: azs
+
+    - name: Get AZ name 
+      set_fact:
+        az_name: "{{ azs.stdout_lines[-1] }}"
+
+    - block:
+      - name: Create VPC
+        include_role:
+          name: vpc
+        vars:
+          network_name: "{{ test_vpc_name }}"
+          state: "present"
+
+      - name: Create SG
+        openstack.cloud.security_group:
+          name: "{{ test_security_group_name }}"
+          description: "dummy"
+        register: newsg
+
+      - name: Get IDs
+        set_fact:
+         sg_id: "{{ newsg.id }}"
+         vpc_id: "{{ net_router.id }}"
+         subnet_id: "{{ net_network.id }}"
+
+      - name: Create DCS Instance
+        script: "create_dcs_instance.py {{ dcs_inst_name }} {{ vpc_id }} {{ subnet_id }} {{ sg_id }} {{ dcs_inst_pw }} {{ az_name }}"
+        args:
+          executable: python3
+
+      - name: Wait for DCS instance
+        script: "check_dcs_instance.py {{ dcs_inst_name }}"
+        args:
+          executable: python3
+        register: result
+        retries: 20
+        delay: 30
+        until: result.stdout == "RUNNING\n"
+
+      - name: Update DCS instance
+        script: "update_dcs_instance.py {{ dcs_inst_name }}"
+        args:
+          executable: python3
+
+
+      always:
+        - block:
+
+            - name: Delete DCS Instance
+              script: "delete_dcs_instance.py {{ dcs_inst_name }} "
+              args:
+                executable: python3
+
+            - name: Pause for 1 minute
+              pause:
+                 minutes: 1
+
+            - name: Delete SG
+              openstack.cloud.security_group:
+                name: "{{ test_security_group_name }}"
+                state: absent
+
+            - name: Delete VPC + Subnet
+              include_role:
+                name: opentelekomcloud.vpc
+              vars:
+                state: absent
+                network_name: "{{ test_vpc_name }}"
+
+          ignore_errors: true
