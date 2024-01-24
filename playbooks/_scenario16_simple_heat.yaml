@@ -28,7 +28,7 @@
           template: "files/scenario16_stack_template.yaml"
           name: "{{ stack_name }}"
           parameters:
-            public_net_id: "{{ nets['openstack_networks'][0]['id'] }}"
+            public_net_id: "{{ nets['networks'][0]['id'] }}"
 
               #      - name: Query Stack
               #        openstack.cloud.stack_info:

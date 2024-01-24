@@ -14,6 +14,8 @@
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_network_name: "{{ ( prefix + '-net') }}"
         test_image: Standard_Fedora_37_latest
+        test_flavor: s2.medium.2
+        keypair_private_key_dest: "{{ ('~/.ssh/' + (prefix + '-kp') + '.pem') }}"
 
     - name: Query specific flavor
       openstack.cloud.compute_flavor_info:
@@ -23,7 +25,7 @@
     # using s2.medium.2 as fallback in case the flavor from inv is not available in the env
     - set_fact:
         test_flavor: s2.medium.2
-      when: flavor_result.openstack_flavors | length==0
+      when: flavor_result.flavors | length==0
 
     - debug:
         msg: "Using prefix {{ prefix }}"
@@ -41,12 +43,17 @@
 
     - block:
 
-      - name: Create Keypair
-        include_role:
-          name: opentelekomcloud.keypair
-        vars:
-          keypair_name: "{{ test_keypair_name }}"
-          state: "present"
+      - name: Create KeyPair
+        openstack.cloud.keypair:
+          state: present
+          name: "{{ test_keypair_name }}"
+        register: keypair_output
+
+      - name: Save private key
+        copy:
+          dest: "{{ keypair_private_key_dest }}"
+          content: "{{ keypair_output['keypair']['private_key'] }}"
+          mode: 0600
 
       - name: List Networks
         openstack.cloud.networks_info:
@@ -112,7 +119,7 @@
 
       - name: get server id
         set_fact:
-          server_id: "{{ server.id }}"
+          server_id: "{{ server.server.id }}"
 
       - name: Attach FIP
         openstack.cloud.floating_ip:
@@ -130,7 +137,7 @@
           - "az=default"
 
       - set_fact:
-          server_ip: "{{ server['openstack_servers'][0]['public_v4'] }}"
+          server_ip: "{{ server['servers'][0]['access_ipv4'] }}"
         tags:
           - "metric=create_server"
           - "az=default"
@@ -223,11 +230,14 @@
                 state: absent
                 network_name: "{{ test_network_name }}"
 
-            - name: Delete Keypair
-              include_role:
-                name: opentelekomcloud.keypair
-              vars:
-                keypair_name: "{{ test_keypair_name }}"
-                force_delete_key: true
-                state: "absent"
+            - name: Delete KeyPair
+              openstack.cloud.keypair:
+                state: absent
+                name: "{{ test_keypair_name }}"
+
+            - name: delete private key
+              file:
+                path: "{{ keypair_private_key_dest }}"
+                state: absent
+
           ignore_errors: true

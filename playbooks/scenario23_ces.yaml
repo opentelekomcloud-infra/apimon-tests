@@ -25,8 +25,8 @@
     # using s2.medium.2 as fallback in case the flavor from inv is not available in the env
     - set_fact:
         test_flavor: s2.medium.2
-      when: flavor_result.openstack_flavors | length==0
-    
+      when: flavor_result.flavors | length==0
+
     - name: Ensure .ssh exists
       file:
         path: "~/.ssh"
@@ -65,7 +65,7 @@
 
        - name: Get server id
          set_fact:
-           server_id: "{{ server.id }}"
+           server_id: "{{ server.server.id }}"
 
        - name: Create CES alarm 
          opentelekomcloud.cloud.ces_alarms:

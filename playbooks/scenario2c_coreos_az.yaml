@@ -21,13 +21,13 @@
 
     - name: Query specific flavor
       openstack.cloud.compute_flavor_info:
-        name: "{{ test_flavor }}"
+        name: "s3.medium.2"
       register: flavor_result
 
     # using s2.medium.2 as fallback in case the flavor from inv is not available in the env
     - set_fact:
         test_flavor: s2.medium.2
-      when: flavor_result.openstack_flavors | length==0
+      when: flavor_result.flavors | length==0
 
     - name: Find whether we already have the image
       openstack.cloud.image_info:
