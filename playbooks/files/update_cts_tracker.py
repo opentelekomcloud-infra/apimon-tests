@@ -12,5 +12,5 @@ attrs = {
     "status": "disabled"
 }
 
-tracker_name="system"
+tracker_name = "system"
 conn.cts.update_tracker(tracker_name, **attrs)
