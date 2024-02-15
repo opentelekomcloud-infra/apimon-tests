@@ -1,5 +1,5 @@
 ---
-- name: Scenario 18 - empty CCE cluster functionality
+- name: Scenario 18 - CCE cluster with worker nodes 
   hosts: localhost
   vars:
     prefix: scenario18a-
@@ -7,7 +7,7 @@
     test_cce_container_network_mode: overlay_l2
     test_node_flavor: s3.large.2
     test_node_os: 'EulerOS 2.9'
-    test_volume_type: SAS
+    test_volume_type: SSD
     test_volume_size: 100
 
   tasks:
@@ -18,10 +18,10 @@
         test_router_name: "{{ (prefix + '-test_router_apimon') }}"
         test_subnet_name: "{{ (prefix + '-test_subnet_apimon') }}"
         test_network_name: "{{ (prefix + '-test_network_apimon') }}"
-        # NOTE: CCE doesn't support "_"
         test_cluster_name: "{{ ('z-' + prefix + '-cluster') }}"
         test_keypair_name: "{{ ( prefix + '-cce-kp' ) }}"
         test_node_name: "{{ ( prefix + '-node' ) }}"
+        test_node_pool_name: "{{ ( prefix + '-pool' ) }}"
 
     - block:
 
@@ -54,10 +54,33 @@
           router: "{{ test_router_name }}"
           network: "{{ test_network_name }}"
           container_network_mode: "{{ test_cce_container_network_mode }}"
+          wait: true
         register: cluster
         tags:
           - 'service=cce'
           - 'metric=create_cce_cluster'
+
+      - name: Create NodePool Node
+        opentelekomcloud.cloud.cce_node_pool:
+          availability_zone: "{{ az }}"
+          cluster: "{{ test_cluster_name }}"
+          initial_node_count: 1
+          data_volumes:
+            - volumetype: "{{ test_volume_type }}"
+              size: "{{ test_volume_size }}"
+          flavor: "{{ test_node_flavor }}"
+          ssh_key: "{{ test_keypair_name }}"
+          name: "{{ test_node_pool_name }}"
+          network: "{{ test_network_name }}"
+          os: "{{ test_node_os }}"
+          root_volume_size: "{{ test_volume_size }}"
+          root_volume_type: "{{ test_volume_type }}"
+          wait: false
+          timeout: 300
+          state: present
+        register: pool
+        vars:
+          az: "{{ azs['availability_zones'][1]['name'] }}"
 
       - name: Create Worker Node
         opentelekomcloud.cloud.cce_cluster_node:
@@ -80,10 +103,31 @@
         vars:
           az: "{{ azs['availability_zones'][0]['name'] }}"
 
+      - name: Query CCE Cluster
+        opentelekomcloud.cloud.cce_cluster_info:
+          name: "{{ test_cluster_name }}"
+        register: cluster_info
+
+      - name: Query NodePool Node
+        opentelekomcloud.cloud.cce_node_pool_info:
+          cce_cluster: "{{ test_cluster_name }}"
+        register: pool
+        # purpose of wait:false for nodepool is to have simoultaneous creation of 2 nodes
+        until: pool.cce_node_pools[0].status.status == ""
+        retries: 30
+        delay: 5
+
+      - name: Query Worker  Node 
+        opentelekomcloud.cloud.cce_cluster_node_info:
+          cce_cluster: "{{ test_cluster_name }}"
+          name: "{{ test_node_name }}"
+        register: node
+
       - name: Delete CCE Cluster
         opentelekomcloud.cloud.cce_cluster:
           name: "{{ test_cluster_name }}"
           state: "absent"
+          wait: true
         tags:
           - 'service_cce'
           - 'metric=delete_cce_cluster'
