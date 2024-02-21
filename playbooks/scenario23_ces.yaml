@@ -16,16 +16,17 @@
         test_image: Standard_Fedora_37_latest
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_ces_alarm_name: "{{ (prefix + 'alarm') }}"
+        test_flavor: s2.medium.2
     
-    - name: Query specific flavor
-      openstack.cloud.compute_flavor_info:
-        name: "{{ test_flavor }}"
-      register: flavor_result
+    # - name: Query specific flavor
+    #   openstack.cloud.compute_flavor_info:
+    #     name: "{{ test_flavor }}"
+    #   register: flavor_result
 
     # using s2.medium.2 as fallback in case the flavor from inv is not available in the env
-    - set_fact:
-        test_flavor: s2.medium.2
-      when: flavor_result.flavors | length==0
+    # - set_fact:
+    #     test_flavor: s2.medium.2
+    #   when: flavor_result.flavors | length==0
 
     - name: Ensure .ssh exists
       file:
