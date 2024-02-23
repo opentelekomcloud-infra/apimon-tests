@@ -7,6 +7,6 @@ roles:
   - name: opentelekomcloud.security_group
 collections:
   - name: opentelekomcloud.cloud
-    version: 0.7.0
+    version: 1.4.0
   - name: openstack.cloud
-    version: 1.2.1
+    version: 2.0.0
