@@ -14,7 +14,6 @@
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_network_name: "{{ ( prefix + '-net') }}"
         test_image: Standard_Fedora_37_latest
-        test_flavor: s2.medium.2
         keypair_private_key_dest: "{{ ('~/.ssh/' + (prefix + '-kp') + '.pem') }}"
 
     - name: Query specific flavor
