@@ -2,6 +2,9 @@
 
 # Scenario 45: DMS
 #
+# Requires: Opentelekom cloud ansible collections v0.14.1
+#           otcextensions v0.30.9 (issue with 0.31.0)
+#
 - name: Scenario 45 - DMS Kafka Instance
   hosts: localhost
   collections:
