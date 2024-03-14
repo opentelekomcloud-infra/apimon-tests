@@ -2,13 +2,8 @@
 
 # Scenario 45: DMS
 #
-# Requires: Opentelekom cloud ansible collections v0.14.1
-#           otcextensions v0.30.9 (issue with 0.31.0)
-#
 - name: Scenario 45 - DMS Kafka Instance
   hosts: localhost
-  collections:
-    - opentelekomcloud.cloud
   vars:
     prefix: scenario45-
   tasks:
@@ -30,7 +25,7 @@
 
       - name: Get AZ name
         set_fact:
-          az_name: "{{ azs.stdout_lines[-1] }}"
+          az_id: "{{ azs.stdout_lines | random }}"
 
       - name: Create VPC
         opentelekomcloud.cloud.vpc:
@@ -63,7 +58,7 @@
           vpc_id: "{{ newvpc.vpc.id }}"
           security_group_id: "{{ newsg.security_group.id }}"
           subnet_id: "{{ sn.subnet.id }}"
-          available_zones: [ "{{ az_name }}" ]
+          available_zones: [ "{{ az_id }}" ]
           product_id: '00300-30308-0--0'
           storage_spec_code: 'dms.physical.storage.ultra'
 
