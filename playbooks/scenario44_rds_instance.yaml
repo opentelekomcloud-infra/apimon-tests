@@ -189,10 +189,6 @@
               - 'service=rds'
               - "metric=delete_rds_mysql"
 
-          # Currently there is issue with RDS deletion. Timeout is too short link: https://github.com/opentelekomcloud/ansible-collection-cloud/issues/306
-          - name: Wait to finish RDS deletion
-            command: sleep 60
-
           # Delete VPC and SUBNET
           - name: Delete VPC
             include_role:
