@@ -11,7 +11,7 @@ def find_latest_version(datastores):
 
 if __name__ == "__main__":
     try:
-        # Check if there are at least two command-line arguments 
+        # Check if there are at least two command-line arguments
         # (script name + JSON data)
         if len(sys.argv) > 1:
             # Load JSON data from the command-line arguments
