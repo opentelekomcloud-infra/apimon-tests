@@ -38,15 +38,15 @@
 
     # Set random ID of the run and combine it with the prefix
     - set_fact:
-        RID: "{{ ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(999999 | random, true) ) }}"
-        prefix: "{{ (prefix + '{{ RID }}') }}"
+        rid: "{{ ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(999999 | random, true) ) }}"
+        prefix: "{{ (prefix + '{{ rid }}') }}"
 
     # Set all neccessary names combine with prefix
     - set_fact:
         test_rds_name: "{{  prefix  }}"
-        test_router_name: "{{ (prefix + '-router')}}"
-        test_subnet_name: "{{ (prefix + '-subnet')}}"
-        test_network_name: "{{ (prefix + '-network')}}"        
+        test_router_name: "{{ ('vpc_'+ prefix + '-router')}}"
+        test_subnet_name: "{{ ('vpc_'+ prefix + '-subnet')}}"
+        test_network_name: "{{ ('vpc_'+ prefix + '-network')}}"        
         test_security_group_name: "{{ (prefix + '-sg') }}"
         password: "{{ ( prefix + 'test8*') }}"
 
@@ -116,7 +116,8 @@
           - 'service=rds'
           - 'metric=create_rds_mysql'
 
-      - set_fact: rds="{{ rds_mysql }}"
+      - set_fact: 
+          rds: "{{ rds_mysql }}"
         when: db_type == "mysql"
 
       # Create RDS instance PostgreSQL
@@ -145,7 +146,8 @@
           - 'service=rds'
           - 'metric=create_rds_postgresql'
 
-      - set_fact: rds="{{ rds_pg }}"
+      - set_fact: 
+          rds: "{{ rds_pg }}"
         when: db_type == "postgresql"
 
 
