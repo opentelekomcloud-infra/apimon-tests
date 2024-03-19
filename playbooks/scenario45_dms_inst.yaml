@@ -54,7 +54,7 @@
       - name: Create DMS Kafka Instance
         opentelekomcloud.cloud.dms_instance:
           name: "{{ dms_inst_name }}"
-          storage_space: '600'
+          storage_space: 600
           vpc_id: "{{ newvpc.vpc.id }}"
           security_group_id: "{{ newsg.security_group.id }}"
           subnet_id: "{{ sn.subnet.id }}"
