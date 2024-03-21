@@ -161,7 +161,7 @@
           name: "{{ rds.instance.id }}"
 
 
-      # Queirying RDS backup info. You can use any of specified attributes, together or separetely.
+      # Querying RDS backup info. You can use any of specified attributes, together or separately.
       - name: Get RDS backup info
         opentelekomcloud.cloud.rds_backup_info:
           instance: "{{ rds.instance.id }}"
