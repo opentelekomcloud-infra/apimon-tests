@@ -5,7 +5,6 @@
   collections:
     - opentelekomcloud.cloud
   tasks:
-
     - name: Get datastore info
       rds_datastore_info:
         datastore: postgresql
