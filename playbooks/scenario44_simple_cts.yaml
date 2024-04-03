@@ -15,26 +15,39 @@
         bucket_object: "CloudTraces/"
 
     - block:
+      # There is only one CTS tracker (system), delete it first
       - name: Delete CTS system tracker
         script: "delete_cts_tracker.py"
         args:
           executable: python3
         ignore_errors: true
 
+      - name: Check if CTS system tracker still exists
+        command: "/usr/bin/openstack cts tracker show system"
+        register: rc
+        ignore_errors: true
+
       - name: Create OBS bucket
         script: "create_container.py {{ bucket_name }}"
         args:
           executable: python3
+        register: rc_obs
+        when: rc.failed is true
 
+      # Enable CTS system tracker, only if it does not exits and OBS creation succeeded
       - name: Enable CTS system tracker
         script: "create_cts_tracker.py {{ bucket_name }}"
         args:
           executable: python3
+        register: rc_create
+        when: rc.failed is true and rc_obs.failed is false
 
+      # Update tracker, only if createion succeeded
       - name: Update CTS system tracker
         script: "update_cts_tracker.py {{ bucket_name }}"
         args:
           executable: python3
+        when: rc_create.failed is false
 
       always:
         - block:
