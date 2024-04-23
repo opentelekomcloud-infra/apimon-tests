@@ -12,4 +12,3 @@ for raw in conn.dms.products():
         print(raw.product_id)
         print(raw.io[0].get("storage_spec_code"))
         break
-
