@@ -15,6 +15,7 @@
         test_vpc_name: "{{ ( prefix + '-vpc') }}"
         test_subnet_name: "{{ ( prefix + '-subnet') }}"
         dms_inst_name: "{{ (prefix + '-dms_apimon') }}"
+        dms_spec: dms.instance.kafka.cluster.c3.mini
 
     - block:
       - name: List DMS az
@@ -26,6 +27,12 @@
       - name: Get AZ name
         set_fact:
           az_id: "{{ azs.stdout_lines | random }}"
+
+      - name: Get DMS product spec
+        script: "dms_list_products.py {{ dms_spec }}"
+        args:
+          executable: python3
+        register: spec
 
       - name: Create VPC
         opentelekomcloud.cloud.vpc:
@@ -54,13 +61,13 @@
       - name: Create DMS Kafka Instance
         opentelekomcloud.cloud.dms_instance:
           name: "{{ dms_inst_name }}"
-          storage_space: 600
+          storage_space: "{{ spec.stdout_lines[0] }}"
           vpc_id: "{{ newvpc.vpc.id }}"
           security_group_id: "{{ newsg.security_group.id }}"
           subnet_id: "{{ sn.subnet.id }}"
           available_zones: [ "{{ az_id }}" ]
-          product_id: '00300-30308-0--0'
-          storage_spec_code: 'dms.physical.storage.ultra'
+          product_id: "{{ spec.stdout_lines[1] }}"
+          storage_spec_code: "{{ spec.stdout_lines[2] }}"
 
       - name: Wait for DMS Kafka instance
         opentelekomcloud.cloud.dms_instance_info:
@@ -74,6 +81,7 @@
         opentelekomcloud.cloud.dms_instance:
           name: "{{ dms_inst_name }}"
           description: 'APImon - description updated'
+        when: dmsinfo.dms_instances[0].status == "RUNNING"
 
       always:
         - block:
@@ -85,7 +93,7 @@
 
             - name: Pause for 30 seconds
               pause:
-                 seconds: 30
+                seconds: 30
 
             - name: Delete SG
               openstack.cloud.security_group:
