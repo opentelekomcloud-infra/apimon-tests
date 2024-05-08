@@ -3,7 +3,7 @@
 import openstack
 import sys
 
-conn = openstack.connect(cloud='otc')
+conn = openstack.connect()
 
 spec = sys.argv[1]
 for raw in conn.dms.products():
