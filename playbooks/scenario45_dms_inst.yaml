@@ -1,0 +1,112 @@
+---
+
+# Scenario 45: DMS
+#
+- name: Scenario 45 - DMS Kafka Instance
+  hosts: localhost
+  vars:
+    prefix: scenario45-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) )[0:24] }}"
+
+    - set_fact:
+        test_security_group_name: "{{ (prefix + '-sg') }}"
+        test_vpc_name: "{{ ( prefix + '-vpc') }}"
+        test_subnet_name: "{{ ( prefix + '-subnet') }}"
+        dms_inst_name: "{{ (prefix + '-dms_apimon') }}"
+        dms_spec: dms.instance.kafka.cluster.c3.mini
+
+    - block:
+      - name: List DMS az
+        script: "list_dms_az.py"
+        args:
+          executable: python3
+        register: azs
+
+      - name: Get AZ name
+        set_fact:
+          az_id: "{{ azs.stdout_lines | random }}"
+
+      - name: Get DMS product spec
+        script: "dms_list_products.py {{ dms_spec }}"
+        args:
+          executable: python3
+        register: spec
+
+      - name: Create VPC
+        opentelekomcloud.cloud.vpc:
+          name: "{{ test_vpc_name }}"
+          cidr: "10.10.0.0/24"
+          state: present
+        register: newvpc
+
+      - name: Create subnet for VPC
+        opentelekomcloud.cloud.subnet:
+          name: "{{ test_subnet_name }}"
+          vpc_id: "{{ newvpc.vpc.id }}"
+          cidr: "10.10.0.0/27"
+          gateway_ip: "10.10.0.1"
+        register: sn
+
+      - name: Create SG
+        openstack.cloud.security_group:
+          name: "{{ test_security_group_name }}"
+          description: "dummy"
+        register: newsg
+
+      - name: Create DMS Kafka Instance
+        opentelekomcloud.cloud.dms_instance:
+          name: "{{ dms_inst_name }}"
+          storage_space: "{{ spec.stdout_lines[0] }}"
+          vpc_id: "{{ newvpc.vpc.id }}"
+          security_group_id: "{{ newsg.security_group.id }}"
+          subnet_id: "{{ sn.subnet.id }}"
+          available_zones: [ "{{ az_id }}" ]
+          product_id: "{{ spec.stdout_lines[1] }}"
+          storage_spec_code: "{{ spec.stdout_lines[2] }}"
+
+      - name: Wait for DMS Kafka instance
+        opentelekomcloud.cloud.dms_instance_info:
+          name: "{{ dms_inst_name }}"
+        register: dmsinfo
+        retries: 20
+        delay: 30
+        until: dmsinfo.dms_instances[0].status == "RUNNING"
+
+      - name: Update DMS Kafka instance
+        opentelekomcloud.cloud.dms_instance:
+          name: "{{ dms_inst_name }}"
+          description: 'APImon - description updated'
+        when: dmsinfo.dms_instances[0].status == "RUNNING"
+
+      always:
+        - block:
+
+            - name: Delete DMS Kafka Instance
+              opentelekomcloud.cloud.dms_instance:
+                name: "{{ dms_inst_name }}"
+                state: absent
+
+            # Pause necessary, see bug OTCPAAS-1038
+            - name: Pause for 30 seconds
+              pause:
+                seconds: 30
+
+            - name: Delete SG
+              openstack.cloud.security_group:
+                name: "{{ test_security_group_name }}"
+                state: absent
+
+            - name: Delete Subnet
+              opentelekomcloud.cloud.subnet:
+                name: "{{ test_subnet_name }}"
+                vpc_id: "{{ newvpc.vpc.id }}"
+                state: absent
+
+            - name: Delete vpc
+              opentelekomcloud.cloud.vpc:
+                name: "{{ test_vpc_name }}"
+                state: absent
+
+          ignore_errors: true
