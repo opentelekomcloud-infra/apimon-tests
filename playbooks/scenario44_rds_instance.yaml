@@ -35,11 +35,15 @@
     - debug:
         msg: "DB type is {{  db_type  }} version {{ db_version }}"
 
+    # Set random ID of the run
+    - name: Set random ID of the run
+      set_fact:
+        rid: "{{ lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(999999 | random, true) }}"
 
-    # Set random ID of the run and combine it with the prefix
-    - set_fact:
-        rid: "{{ ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(999999 | random, true) ) }}"
-        prefix: "{{ (prefix + '{{ rid }}') }}"
+    # Combine it with the prefix and ensure it's truncated
+    - name: Combine prefix with RID
+      set_fact:
+        prefix: "{{ ('rds-' + rid | string)[:10] }}"
 
     # Set all neccessary names combine with prefix
     - set_fact:
@@ -48,7 +52,7 @@
         test_subnet_name: "{{ ('vpc_'+ prefix + '-subnet')}}"
         test_network_name: "{{ ('vpc_'+ prefix + '-network')}}"        
         test_security_group_name: "{{ (prefix + '-sg') }}"
-        password: "{{ ( prefix + 'test8*') }}"
+        password: "{{ ('Test8*' + prefix)[:20] }}"  # Ensure the password is within 20 characters
 
 
     # Query all flavoers for specific DB engine
