@@ -1,0 +1,9 @@
+---
+- name: Scenario 32 - list of containers obs
+  hosts: localhost
+  ignore_errors: yes
+  tasks:
+      - name: List of containers
+        script: "list_containers.py"
+        args:
+          executable: python3
