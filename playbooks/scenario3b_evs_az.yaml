@@ -1,0 +1,38 @@
+---
+
+# Scenario to test EVS deployment in different AZs
+#
+- name: Scenario 3b - SSD or SAS volume creation per AZ
+  hosts: localhost
+  vars:
+    prefix: scenario3b-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        test_volume_name: "{{ (prefix + '-test_volume_apimon') }}"
+
+    - set_fact:
+        volume_type: "{{ ['SSD', 'SAS'] | random }}"
+
+    - block:
+
+      - name: Display volume type
+        debug:
+          msg: "disk_type {{ volume_type }}"
+
+
+      - name: Get Availability zones
+        opentelekomcloud.cloud.availability_zone_info:
+        register: azs
+
+      - name: "Create Volume in AZs"
+        include_role:
+          name: volume_create_delete
+        vars:
+          volume_name: "{{ (item['name'] + '.' + test_volume_name) }}"
+          availability_zone: "{{ item['name'] }}"
+          size: 10
+          display_name: "{{ volume_name }}"
+        loop: "{{ azs['availability_zones'] }}"
