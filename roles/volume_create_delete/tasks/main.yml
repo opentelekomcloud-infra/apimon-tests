@@ -20,7 +20,7 @@
       - "metric=create_volume_SSD"
     register: volume
 
-  - name: "Create SSD Volume in {{ availability_zone }}"
+  - name: "Create SAS Volume in {{ availability_zone }}"
     when: volume_type == "SAS"
     openstack.cloud.volume:
       state: present
