@@ -33,9 +33,8 @@
       - "metric=create_volume_SAS"
     register: volume
 
-
   - name: "Create Volume in {{ availability_zone }}"
-    when: volume_type == false
+    when: not volume_type
     openstack.cloud.volume:
       state: present
       availability_zone: "{{ availability_zone | default(omit) }}"
