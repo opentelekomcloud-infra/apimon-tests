@@ -1,4 +1,4 @@
-ansible==5.8.0
+ansible==7.7.0
 dnspython==2.4.2
-otcextensions==0.30.9
+otcextensions==0.31.8
 openstacksdk==2.0.0
