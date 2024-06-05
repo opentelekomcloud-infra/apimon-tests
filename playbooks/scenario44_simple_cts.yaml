@@ -12,7 +12,6 @@
 
     - set_fact:
         bucket_name: "{{ (prefix + '-cts-apimon') }}"
-        bucket_object: "CloudTraces/"
 
     - block:
       # There is only one CTS tracker (system), delete it first
@@ -56,11 +55,16 @@
             args:
               executable: python3
 
+          - name: Get all object from OBS bucket
+            command: "/usr/bin/openstack obs object list -f value {{ bucket_name }}"
+            register: obj_list
 
           - name: Delete objects in OBS bucket
-            script: "delete_object.py {{ bucket_name}} {{ bucket_object}}"
+            script: "delete_object.py {{ bucket_name}} {{ item }}"
             args:
               executable: python3     
+            with_items:
+              - "{{ obj_list.stdout_lines }}"
 
           - name: Delete OBS container
             script: "delete_container.py {{ bucket_name}} "
