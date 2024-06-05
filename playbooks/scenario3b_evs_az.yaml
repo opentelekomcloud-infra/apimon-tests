@@ -22,7 +22,6 @@
         debug:
           msg: "disk_type {{ volume_type }}"
 
-
       - name: Get Availability zones
         opentelekomcloud.cloud.availability_zone_info:
         register: azs
