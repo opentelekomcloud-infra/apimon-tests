@@ -13,8 +13,7 @@
         test_security_group_name: "{{ (prefix + '-sg') }}"
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_network_name: "{{ ( prefix + '-net') }}"
-        test_image: Standard_Fedora_37_latest
-        test_flavor: s2.medium.2
+        test_image: Standard_Fedora_38_latest
         keypair_private_key_dest: "{{ ('~/.ssh/' + (prefix + '-kp') + '.pem') }}"
 
     - name: Query specific flavor
