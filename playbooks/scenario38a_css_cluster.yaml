@@ -1,6 +1,6 @@
-#Create CSS Cluster
 ---
-- hosts: localhost
+- name: Scenario 38a - Create CSS Cluster
+  hosts: localhost
   vars:
     css_cluster_type: opensearch
     css_cluster_version: 1.3.6
