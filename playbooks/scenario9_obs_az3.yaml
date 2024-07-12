@@ -1,0 +1,62 @@
+---
+
+# Scenario to test bascic OBS functions
+#
+- name: Scenario 9 az3 - OBS
+  hosts: localhost
+  vars:
+    prefix: scenario9az3-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) )[0:24] }}"
+
+    - set_fact:
+        container_name: "{{ ('lz03-apimon-test') }}"
+        object_name: "{{ (prefix + '-object-apimon') }}"
+
+    - block:
+
+      - name: Create file for object
+        ansible.builtin.file:
+          path: "./{{ object_name }}.txt"
+          state: touch
+          mode: u=rw,g=r,o=r
+
+      - name: Create Container
+        script: "create_container.py {{ container_name }} "
+        args:
+          executable: python3
+
+      - name: Get Container
+        script: "get_container.py {{ container_name }} "
+        args:
+          executable: python3
+
+      - name: Create Object
+        script: "create_object.py {{ container_name }} ./{{ object_name }}.txt "
+        args:
+          executable: python3
+
+      - name: Get Object
+        script: "get_object.py {{ container_name }} ./{{ object_name }}.txt "
+        args:
+          executable: python3
+
+      always:
+        - block:
+            - name: Delete file for object
+              ansible.builtin.file:
+                path: "./{{ object_name }}.txt"
+                state: absent
+
+            - name: Delete Object
+              script: "delete_object.py {{ container_name }} {{ object_name }}.txt "
+              args:
+                executable: python3
+
+            - name: Delete Container
+              script: "delete_container.py {{ container_name }} "
+              args:
+                executable: python3
+
+          ignore_errors: true
