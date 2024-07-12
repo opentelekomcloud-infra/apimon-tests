@@ -26,29 +26,21 @@
         script: "create_container.py {{ container_name }} "
         args:
           executable: python3
-        tags:
-          - "metric=create_container_az3"
 
       - name: Get Container
         script: "get_container.py {{ container_name }} "
         args:
           executable: python3
-        tags:
-          - "metric=get_container_az3"
 
       - name: Create Object
         script: "create_object.py {{ container_name }} ./{{ object_name }}.txt "
         args:
           executable: python3
-        tags:
-          - "metric=create_object_az3"
 
       - name: Get Object
         script: "get_object.py {{ container_name }} ./{{ object_name }}.txt "
         args:
           executable: python3
-        tags:
-          - "metric=get_object_az3"
 
       always:
         - block:
@@ -61,14 +53,10 @@
               script: "delete_object.py {{ container_name }} {{ object_name }}.txt "
               args:
                 executable: python3
-              tags:
-                - "metric=del_object_az3"
 
             - name: Delete Container
               script: "delete_container.py {{ container_name }} "
               args:
                 executable: python3
-              tags:
-                - "metric=del_container_az3"
 
           ignore_errors: true
