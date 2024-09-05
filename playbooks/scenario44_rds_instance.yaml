@@ -4,7 +4,10 @@
   hosts: localhost
   vars:
     prefix: rds-
-    volume_type: "ultrahigh"
+    test_router_name: "Apimon-test-rds-router"
+    test_network_name: "Apimon-test-rds-network"
+    test_subnet_name: "Apimon-test-rds-subnet"
+    test_security_group_name: "Apimon-test-rds-sg"
 
   tasks:
     # Random selection between MySQL and PostgreSQL db engine
@@ -59,21 +62,42 @@
     - name: Get info about choosen type of DB
       opentelekomcloud.cloud.rds_flavor_info:
         datastore: "{{  db_type }}"
-        instance_mode: "ha"
+        instance_mode: "single"
       register: rds_flavors
 
-    # Print the first flavor in the query
-    - name: debug
+    # Find flavor with smallest RAM and smallest VCPUs
+    - name: Set fact for smallest flavor based on RAM and VCPUs
+      set_fact:
+        smallest_flavor: "{{ rds_flavors.rds_flavors | sort(attribute='ram') | sort(attribute='vcpus') | first }}"
+
+    # Print the smallest flavor details
+    - name: Print smallest flavor
       ansible.builtin.debug:
-        msg: "{{ rds_flavors.rds_flavors[0].name }}"
+        msg: "{{ smallest_flavor.name }}"
+    
+    # Set storage type
+    - name: Set storage type based on RDS flavor spec code structure
+      set_fact:
+        volume_type: "{{ 'CLOUDSSD' if smallest_flavor.name.split('.')[2] in ['x1', 'n1'] else 'ULTRAHIGH' }}"
+
+    # Debug to show the selected storage type
+    - name: Print selected storage type
+      ansible.builtin.debug:
+        msg: "Selected storage type based on flavor spec code: {{ volume_type }}"
      
     - debug:
         msg: "Using prefix {{ prefix }}"
    
 
     - block:
-      # Create VPC and SUBNET
-      - name: Create VPC (Router + Net + Subnet)
+     # Check if the VPC (Router + Network + Subnet) exists
+      - name: Check if Network exists
+        openstack.cloud.networks_info:
+          name: "{{ test_network_name }}"
+        register: network_check
+
+      # Create VPC and Subnet only if the network doesn't exist
+      - name: Create VPC (Router + Net + Subnet) if it doesn't exist
         include_role:
           name: opentelekomcloud.vpc
         vars:
@@ -81,12 +105,20 @@
           network_name: "{{ test_network_name }}"
           subnet_name: "{{ test_subnet_name }}"
           state: present
+        when: network_check.networks | length == 0
 
-      # Create Security Group
-      - name: Create SecurityGroup
+      # Check if the Security Group exists
+      - name: Check if Security Group exists
+        openstack.cloud.security_group_info:
+          name: "{{ test_security_group_name }}"
+        register: sg_check
+
+      # Create Security Group only if it doesn't exist
+      - name: Create Security Group if it doesn't exist
         openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: RDS test SG created by APImon
+        when: sg_check.security_groups | length == 0
 
       # Query all available Availability zones
       - name: Get Availability zones
@@ -100,11 +132,12 @@
         opentelekomcloud.cloud.rds_instance:
           name: "{{ test_rds_name }}"
           state: present
-          availability_zone: "{{ azs['availability_zones'][0]['name'] }},{{ azs['availability_zones'][1]['name'] }}"
+          # availability_zone: "{{ azs['availability_zones'][0]['name'] }},{{ azs['availability_zones'][1]['name'] }}"
+          availability_zone: "{{ azs['availability_zones'][0]['name'] }}"
           datastore_type: "{{ db_type }}"
           datastore_version: "{{ db_version }}"
-          flavor: "{{ rds_flavors.rds_flavors[0].name }}"
-          ha_mode: "async"
+          flavor: "{{ smallest_flavor.name }}"
+          # ha_mode: "async"
           router: "{{ test_router_name }}"
           network: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
@@ -130,11 +163,12 @@
         opentelekomcloud.cloud.rds_instance:
           name: "{{ test_rds_name }}"
           state: present
-          availability_zone: "{{ azs['availability_zones'][0]['name'] }},{{ azs['availability_zones'][1]['name'] }}"
-          datastore_type: "{{  db_type }}"
+          # availability_zone: "{{ azs['availability_zones'][0]['name'] }},{{ azs['availability_zones'][1]['name'] }}"
+          availability_zone: "{{ azs['availability_zones'][0]['name'] }}"
+          datastore_type: "{{ db_type }}"
           datastore_version: "{{ db_version }}"
-          flavor: "{{ rds_flavors.rds_flavors[0].name }}"
-          ha_mode: "async"
+          flavor: "{{ smallest_flavor.name }}"
+          # ha_mode: "async"
           router: "{{ test_router_name }}"
           network: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
@@ -193,22 +227,6 @@
               wait: true
             tags:
               - 'service=rds'
-              - "metric=delete_rds_mysql"
-
-          # Delete VPC and SUBNET
-          - name: Delete VPC
-            include_role:
-              name: opentelekomcloud.vpc
-            vars:
-              router_name: "{{ test_router_name }}"
-              network_name: "{{ test_network_name }}"
-              subnet_name: "{{ test_subnet_name }}"
-              state: absent
-
-          # Delete Security Group
-          - name: Delete SecurityGroup
-            openstack.cloud.security_group:
-              state: "absent"
-              name: "{{ test_security_group_name }}"
+              - "metric=delete_rds_mysql"        
 
           ignore_errors: true
