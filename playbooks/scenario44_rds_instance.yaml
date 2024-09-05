@@ -90,11 +90,6 @@
    
 
     - block:
-     # Check if the VPC (Router + Network + Subnet) exists
-      - name: Check if Network exists
-        openstack.cloud.networks_info:
-          name: "{{ test_network_name }}"
-        register: network_check
 
       # Create VPC and Subnet only if the network doesn't exist
       - name: Create VPC (Router + Net + Subnet) if it doesn't exist
@@ -105,20 +100,14 @@
           network_name: "{{ test_network_name }}"
           subnet_name: "{{ test_subnet_name }}"
           state: present
-        when: network_check.networks | length == 0
-
-      # Check if the Security Group exists
-      - name: Check if Security Group exists
-        openstack.cloud.security_group_info:
-          name: "{{ test_security_group_name }}"
-        register: sg_check
+        # when: network_check.networks | length == 0
 
       # Create Security Group only if it doesn't exist
       - name: Create Security Group if it doesn't exist
         openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: RDS test SG created by APImon
-        when: sg_check.security_groups | length == 0
+          state: present
 
       # Query all available Availability zones
       - name: Get Availability zones
