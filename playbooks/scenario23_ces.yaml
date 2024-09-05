@@ -13,7 +13,7 @@
         test_subnet_name: "{{ (prefix + '-test_subnet_apimon') }}"
         test_network_name: "{{ (prefix + '-test_network_apimon') }}"
         test_server_name: "{{ (prefix + '-test_server_apimon') }}"
-        test_image: Standard_Fedora_38_latest
+        test_image: Standard_Fedora_40_amd64_bios_latest
         test_keypair_name: "{{ (prefix + '-kp') }}"
         test_ces_alarm_name: "{{ (prefix + 'alarm') }}"
     
