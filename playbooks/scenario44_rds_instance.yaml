@@ -51,10 +51,6 @@
     # Set all neccessary names combine with prefix
     - set_fact:
         test_rds_name: "{{  prefix  }}"
-        test_router_name: "{{ ('vpc_'+ prefix + '-router')}}"
-        test_subnet_name: "{{ ('vpc_'+ prefix + '-subnet')}}"
-        test_network_name: "{{ ('vpc_'+ prefix + '-network')}}"        
-        test_security_group_name: "{{ (prefix + '-sg') }}"
         password: "{{ ('Test8*' + prefix)[:20] }}"  # Ensure the password is within 20 characters
 
 
@@ -68,7 +64,8 @@
     # Find flavor with smallest RAM and smallest VCPUs
     - name: Set fact for smallest flavor based on RAM and VCPUs
       set_fact:
-        smallest_flavor: "{{ rds_flavors.rds_flavors | sort(attribute='ram') | sort(attribute='vcpus') | first }}"
+        smallest_flavor: "{{ rds_flavors.rds_flavors | sort(attribute='ram') | first }}"
+
 
     # Print the smallest flavor details
     - name: Print smallest flavor
@@ -100,7 +97,6 @@
           network_name: "{{ test_network_name }}"
           subnet_name: "{{ test_subnet_name }}"
           state: present
-        # when: network_check.networks | length == 0
 
       # Create Security Group only if it doesn't exist
       - name: Create Security Group if it doesn't exist
@@ -133,8 +129,8 @@
           password: "{{ password }}"
           volume_type: "{{ volume_type }}"
           volume_size: 40
-          backup_keepdays: 1
-          backup_timeframe: "02:00-03:00"
+          backup_keepdays: 0
+          # backup_timeframe: "02:00-03:00"
           wait: true
           timeout: 777
         register: rds_mysql
@@ -164,8 +160,8 @@
           password: "{{ password }}"
           volume_type: "{{ volume_type }}"
           volume_size: 40
-          backup_keepdays: 1
-          backup_timeframe: "02:00-03:00"
+          backup_keepdays: 0
+          # backup_timeframe: "02:00-03:00"
           wait: true
           timeout: 777
         register: rds_pg
