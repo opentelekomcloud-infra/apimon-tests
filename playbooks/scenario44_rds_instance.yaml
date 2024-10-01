@@ -140,7 +140,8 @@
           - 'service=rds'
           - 'metric=create_rds_mysql'
 
-      - set_fact: rds="{{ rds_mysql }}"
+      - set_fact: 
+          rds: "{{ rds_mysql }}"
         when: db_type == "mysql"
 
       # Create RDS instance PostgreSQL
@@ -171,7 +172,8 @@
           - 'service=rds'
           - 'metric=create_rds_postgresql'
 
-      - set_fact: rds="{{ rds_pg }}"
+      - set_fact: 
+          rds: "{{ rds_pg }}"
         when: db_type == "postgresql"
 
 
