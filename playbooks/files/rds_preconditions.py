@@ -3,6 +3,7 @@ import sys
 import openstack
 import json
 
+
 def find_latest_version(datastores):
     max_version = max(datastores, key=lambda x: float(x['name']))
     return max_version['name']
@@ -30,7 +31,7 @@ if __name__ == "__main__":
 
         # Retrieve the service endpoint
         endpoint = conn.session.get_endpoint(
-            service_type=service_type, 
+            service_type=service_type,
             interface=interface
         )
 
@@ -75,8 +76,8 @@ if __name__ == "__main__":
 
         # Output the result as JSON
         print(json.dumps({
-            'region': region_name, 
-            'storage_type': storage_type, 
+            'region': region_name,
+            'storage_type': storage_type,
             'latest_version': latest_version
         }))
 
