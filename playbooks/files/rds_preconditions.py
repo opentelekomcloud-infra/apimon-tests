@@ -11,7 +11,7 @@ def find_latest_version(datastores):
 if __name__ == "__main__":
     try:
         if len(sys.argv) != 4:
-            print(json.dumps({"error": "Usage: check_rds_flavor.py <flavor_code>"}))
+            print(json.dumps({"error": "check_rds_flavor.py <flavor_code>"}))
             sys.exit(1)
 
         # Replace placeholders with actual values
@@ -25,11 +25,14 @@ if __name__ == "__main__":
         conn = openstack.connect()
 
         # Determine the service type and interface
-        service_type = 'rdsv3'  # Adjust this to match your service (e.g., 'rds', 'trove')
+        service_type = 'rdsv3'  # Adjust this to match your service
         interface = 'public'       # Use 'internal' or 'admin' if necessary
 
         # Retrieve the service endpoint
-        endpoint = conn.session.get_endpoint(service_type=service_type, interface=interface)
+        endpoint = conn.session.get_endpoint(
+            service_type=service_type, 
+            interface=interface
+        )
 
         # Retrieve the project ID
         project_id = conn.current_project_id
@@ -38,15 +41,20 @@ if __name__ == "__main__":
         region_name = conn.config.region_name
 
         # Construct the URL
-        url1 = f"{endpoint}/storage-type/{database_name}?version_name={latest_version}"
+        url1 = (
+            f"{endpoint}/storage-type/{database_name}"
+            f"?version_name={latest_version}"
+        )
 
         # Make the GET request using the authenticated session
         response = conn.session.get(url1)
         data1 = response.json()
 
         # Construct the URL
-        url2 = f"{endpoint}/flavors/{database_name}?spec_code={spec_code}&version_name={latest_version}"
-
+        url2 = (
+            f"{endpoint}/flavors/{database_name}?spec_code={spec_code}"
+            f"&version_name={latest_version}"
+        )
         # Make the GET request using the authenticated session
         response = conn.session.get(url2)
         data2 = response.json()
@@ -66,8 +74,11 @@ if __name__ == "__main__":
                 break  # Exit the loop after finding the first match
 
         # Output the result as JSON
-        print(json.dumps({'region': region_name, 'storage_type': storage_type, 'latest_version':latest_version}))
+        print(json.dumps({
+            'region': region_name, 
+            'storage_type': storage_type, 
+            'latest_version': latest_version
+        }))
 
     except Exception as e:
         print(f"Error: {str(e)}")
-
