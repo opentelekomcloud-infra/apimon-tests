@@ -2,7 +2,7 @@
 
 # Scenario to test CBR ECS server backup
 # A VPC is created and VM is being started in different AZs
-#
+
 - name: Scenario 47 - CBR server backup 
   hosts: localhost
   vars:
@@ -84,8 +84,7 @@
         set_fact:
           server_id: "{{ server.server.id }}"
 
- # Create CBR backup policy create / update
- #
+      # Create CBR backup policy create / update
       - name: Create Backup Policy
         opentelekomcloud.cloud.cbr_policy:
           name: "{{ test_policy_name }}"
@@ -105,8 +104,7 @@
             - "FREQ=WEEKLY;BYHOUR=14;BYDAY=MO,TU,WE,TH,FR,SA,SU;BYMINUTE=00"
           is_enabled: False
 
- # CBR create vault create backup and restore ECS server
- #
+      # CBR create vault create backup and restore ECS server
       - name: Create CBR server Backup Vault
         opentelekomcloud.cloud.cbr_vault:
           name: "{{ test_vault_name }}"
