@@ -2,6 +2,7 @@
 import sys
 import openstack
 import json
+from otcextensions import sdk
 
 
 def find_latest_version(datastores):
@@ -51,18 +52,18 @@ if __name__ == "__main__":
         response = conn.session.get(url1)
         data1 = response.json()
 
-        # Construct the URL
-        url2 = (
-            f"{endpoint}/flavors/{database_name}?spec_code={spec_code}"
-            f"&version_name={latest_version}"
+        conn = openstack.connect()
+        sdk.register_otc_extensions(conn)
+
+        flavors = conn.rdsv3.flavors(
+            datastore_name=database_name, 
+            version_name=latest_version, 
+            spec_code=spec_code
         )
-        # Make the GET request using the authenticated session
-        response = conn.session.get(url2)
-        data2 = response.json()
+        flavor_list = list(flavors)
+        group_type = flavor_list[0].group_type
 
-        # Extract the group_type from data2
-        group_type = data2['flavors'][0]['group_type']
-
+        
         # Initialize storage_type variable
         storage_type = None
 
