@@ -25,6 +25,7 @@ if __name__ == "__main__":
 
         # Establish a connection using your OpenStack profile
         conn = openstack.connect()
+        sdk.register_otc_extensions(conn)
 
         # Determine the service type and interface
         service_type = 'rdsv3'  # Adjust this to match your service
@@ -52,18 +53,14 @@ if __name__ == "__main__":
         response = conn.session.get(url1)
         data1 = response.json()
 
-        conn = openstack.connect()
-        sdk.register_otc_extensions(conn)
-
         flavors = conn.rdsv3.flavors(
-            datastore_name=database_name, 
-            version_name=latest_version, 
+            datastore_name=database_name,
+            version_name=latest_version,
             spec_code=spec_code
         )
         flavor_list = list(flavors)
         group_type = flavor_list[0].group_type
 
-        
         # Initialize storage_type variable
         storage_type = None
 

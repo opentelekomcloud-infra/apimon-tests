@@ -4,10 +4,10 @@
   hosts: localhost
   vars:
     prefix: rds-
-    test_router_name: "Apimon-test-rds-router"
-    test_network_name: "Apimon-test-rds-network"
-    test_subnet_name: "Apimon-test-rds-subnet"
-    test_security_group_name: "Apimon-test-rds-sg"
+    test_router_name: "apimon-test-rds-router"
+    test_network_name: "apimon-test-rds-network"
+    test_subnet_name: "apimon-test-rds-subnet"
+    test_security_group_name: "apimon-test-rds-sg"
 
   tasks:
     # Set random ID of the run
@@ -92,7 +92,6 @@
           network_name: "{{ test_network_name }}"
           subnet_name: "{{ test_subnet_name }}"
           state: present
-        when: network_check.networks | length == 0
 
       # Check if the Security Group exists
       - name: Check if Security Group exists
@@ -105,12 +104,16 @@
         openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: RDS test SG created by APImon
-        when: sg_check.security_groups | length == 0
 
       # Query all available Availability zones
       - name: Get Availability zones
         opentelekomcloud.cloud.availability_zone_info:
         register: azs
+
+      # Random selection of AZ
+      - name: Get a random availability zone name
+        set_fact:
+          random_az: "{{ azs.availability_zones | map(attribute='name') | list | random }}"
 
       # Create RDS instance MySQL
       - name: Create RDS instance MySQL
@@ -118,12 +121,10 @@
         opentelekomcloud.cloud.rds_instance:
           name: "{{ test_rds_name }}"
           state: present
-          # availability_zone: "{{ azs['availability_zones'][0]['name'] }},{{ azs['availability_zones'][1]['name'] }}"
-          availability_zone: "{{ azs['availability_zones'][0]['name'] }}"
+          availability_zone: "{{ random_az }}"
           datastore_type: "{{ db_type }}"
           datastore_version: "{{ latest_version }}"
           flavor: "{{ smallest_flavor.name }}"
-          # ha_mode: "async"
           router: "{{ test_router_name }}"
           network: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
@@ -150,12 +151,10 @@
         opentelekomcloud.cloud.rds_instance:
           name: "{{ test_rds_name }}"
           state: present
-          # availability_zone: "{{ azs['availability_zones'][0]['name'] }},{{ azs['availability_zones'][1]['name'] }}"
-          availability_zone: "{{ azs['availability_zones'][0]['name'] }}"
+          availability_zone: "{{ random_az }}"
           datastore_type: "{{  db_type }}"
           datastore_version: "{{ latest_version }}"
           flavor: "{{ smallest_flavor.name }}"
-          # ha_mode: "async"
           router: "{{ test_router_name }}"
           network: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
