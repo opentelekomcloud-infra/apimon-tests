@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
         # Construct the URL
         url1 = (
-            f"{endpoint}/storage-type/{database_name}" 
+            f"{endpoint}/storage-type/{database_name}"
             f"?version_name={latest_version}"
         )
 
