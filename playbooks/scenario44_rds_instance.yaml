@@ -25,6 +25,16 @@
         test_rds_name: "{{  prefix  }}"
         password: "{{ ('Test8*' + prefix)[:20] }}"  # Ensure the password is within 20 characters
 
+    # Query all available Availability zones
+    - name: Get Availability zones
+      opentelekomcloud.cloud.availability_zone_info:
+      register: azs
+
+    # Random selection of AZ
+    - name: Get a random availability zone name
+      set_fact:
+        random_az: "{{ azs.availability_zones | map(attribute='name') | list | random }}"
+
     # Random selection between MySQL and PostgreSQL db engine
     - name: Random selection of DB type
       set_fact:
@@ -43,14 +53,14 @@
         instance_mode: "single"
       register: rds_flavors
 
-    # Find flavor with smallest RAM and smallest VCPUs
-    - name: Set fact for smallest flavor based on RAM and VCPUs
-      set_fact:
-        smallest_flavor: "{{ rds_flavors.rds_flavors | sort(attribute='ram') | first }}"
-
     # Run python script to get Region, Storage type and Latest version of DB engine
     - name: Run Python script to find the latest version
-      script: "{{ playbook_dir }}/files/rds_preconditions.py '{{ db_type }}' '{{ versions.rds_datastores | to_nice_json }}' '{{ smallest_flavor.name }}'"
+      script: >
+        {{ playbook_dir }}/files/rds_preconditions.py
+        '{{ db_type }}'
+        '{{ versions.rds_datastores | to_nice_json }}'
+        '{{ rds_flavors.rds_flavors | to_nice_json }}'
+        '{{ random_az }}'
       args:
         executable: python3
       register: script_output
@@ -64,16 +74,18 @@
         region: "{{ script_vars.region }}"
         storage_type: "{{ script_vars.storage_type }}"
         latest_version: "{{ script_vars.latest_version }}"
+        smallest_flavor: "{{ script_vars.smallest_flavor }}"
 
     - name: Display region and storage_type
       debug:
         msg:
           - "Prefix: {{ prefix }}"        
           - "Region: {{ region }}"
+          - "AZ": "{{ random_az }}"
           - "Storage Type: {{ storage_type }}"
           - "DB Type: {{ db_type }}"          
           - "Latest vesion: {{ latest_version }}"
-          - "Smallest flavor: {{ smallest_flavor.name }}"
+          - "Smallest flavor: {{ smallest_flavor }}"
 
    
     - block:
@@ -105,16 +117,6 @@
           name: "{{ test_security_group_name }}"
           description: RDS test SG created by APImon
 
-      # Query all available Availability zones
-      - name: Get Availability zones
-        opentelekomcloud.cloud.availability_zone_info:
-        register: azs
-
-      # Random selection of AZ
-      - name: Get a random availability zone name
-        set_fact:
-          random_az: "{{ azs.availability_zones | map(attribute='name') | list | random }}"
-
       # Create RDS instance MySQL
       - name: Create RDS instance MySQL
         when: db_type == "mysql"
@@ -124,7 +126,7 @@
           availability_zone: "{{ random_az }}"
           datastore_type: "{{ db_type }}"
           datastore_version: "{{ latest_version }}"
-          flavor: "{{ smallest_flavor.name }}"
+          flavor: "{{ smallest_flavor }}"
           router: "{{ test_router_name }}"
           network: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
@@ -154,7 +156,7 @@
           availability_zone: "{{ random_az }}"
           datastore_type: "{{  db_type }}"
           datastore_version: "{{ latest_version }}"
-          flavor: "{{ smallest_flavor.name }}"
+          flavor: "{{ smallest_flavor }}"
           router: "{{ test_router_name }}"
           network: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
