@@ -4,37 +4,12 @@
   hosts: localhost
   vars:
     prefix: rds-
-    volume_type: "ultrahigh"
+    test_router_name: "apimon-test-rds-router"
+    test_network_name: "apimon-test-rds-network"
+    test_subnet_name: "apimon-test-rds-subnet"
+    test_security_group_name: "apimon-test-rds-sg"
 
   tasks:
-    # Random selection between MySQL and PostgreSQL db engine
-    - name: Random selection of DB type
-      set_fact:
-        db_type: "{{ ['mysql', 'postgresql'] | random }}"
-
-    # Query all present versions of previously selected DB engine
-    - name: Get datastore info
-      opentelekomcloud.cloud.rds_datastore_info:
-        datastore: "{{  db_type  }}"
-      register: versions
-
-    - name: debug datastores
-      debug:
-        var: versions.rds_datastores
-
-    - name: Run Python script to find the latest version
-      script: "latest_rds_version.py '{{ versions.rds_datastores | to_nice_json }}'"
-      args:
-        executable: python3
-      register: latest_version_output
-
-    - name: Get the latest version of DB
-      set_fact:
-        db_version: "{{ latest_version_output.stdout }}"
-
-    - debug:
-        msg: "DB type is {{  db_type  }} version {{ db_version }}"
-
     # Set random ID of the run
     - name: Set random ID of the run
       set_fact:
@@ -48,32 +23,80 @@
     # Set all neccessary names combine with prefix
     - set_fact:
         test_rds_name: "{{  prefix  }}"
-        test_router_name: "{{ ('vpc_'+ prefix + '-router')}}"
-        test_subnet_name: "{{ ('vpc_'+ prefix + '-subnet')}}"
-        test_network_name: "{{ ('vpc_'+ prefix + '-network')}}"        
-        test_security_group_name: "{{ (prefix + '-sg') }}"
         password: "{{ ('Test8*' + prefix)[:20] }}"  # Ensure the password is within 20 characters
 
+    # Query all available Availability zones
+    - name: Get Availability zones
+      opentelekomcloud.cloud.availability_zone_info:
+      register: azs
+
+    # Random selection of AZ
+    - name: Get a random availability zone name
+      set_fact:
+        random_az: "{{ azs.availability_zones | map(attribute='name') | list | random }}"
+
+    # Random selection between MySQL and PostgreSQL db engine
+    - name: Random selection of DB type
+      set_fact:
+        db_type: "{{ ['mysql', 'postgresql'] | random }}"
+
+    # Query all present versions of previously selected DB engine
+    - name: Get datastore info
+      opentelekomcloud.cloud.rds_datastore_info:
+        datastore: "{{  db_type  }}"
+      register: versions
 
     # Query all flavoers for specific DB engine
     - name: Get info about choosen type of DB
       opentelekomcloud.cloud.rds_flavor_info:
-        datastore: "{{  db_type }}"
-        instance_mode: "ha"
+        datastore: "{{ db_type }}"
+        instance_mode: "single"
       register: rds_flavors
 
-    # Print the first flavor in the query
-    - name: debug
-      ansible.builtin.debug:
-        msg: "{{ rds_flavors.rds_flavors[0].name }}"
-     
-    - debug:
-        msg: "Using prefix {{ prefix }}"
-   
+    # Run python script to get Region, Storage type and Latest version of DB engine
+    - name: Run Python script to find the latest version
+      script: >
+        {{ playbook_dir }}/files/rds_preconditions.py
+        '{{ db_type }}'
+        '{{ versions.rds_datastores | to_nice_json }}'
+        '{{ rds_flavors.rds_flavors | to_nice_json }}'
+        '{{ random_az }}'
+      args:
+        executable: python3
+      register: script_output
 
+    - name: Parse JSON output from script
+      set_fact:
+        script_vars: "{{ script_output.stdout | from_json }}"
+
+    - name: Set region, storage_type, and latest_version
+      set_fact:
+        region: "{{ script_vars.region }}"
+        storage_type: "{{ script_vars.storage_type }}"
+        latest_version: "{{ script_vars.latest_version }}"
+        smallest_flavor: "{{ script_vars.smallest_flavor }}"
+
+    - name: Display region and storage_type
+      debug:
+        msg:
+          - "Prefix: {{ prefix }}"        
+          - "Region: {{ region }}"
+          - "AZ": "{{ random_az }}"
+          - "Storage Type: {{ storage_type }}"
+          - "DB Type: {{ db_type }}"          
+          - "Latest vesion: {{ latest_version }}"
+          - "Smallest flavor: {{ smallest_flavor }}"
+
+   
     - block:
-      # Create VPC and SUBNET
-      - name: Create VPC (Router + Net + Subnet)
+      # Check if the VPC (Router + Network + Subnet) exists
+      - name: Check if Network exists
+        openstack.cloud.networks_info:
+          name: "{{ test_network_name }}"
+        register: network_check
+
+      # Create VPC and Subnet only if the network doesn't exist
+      - name: Create VPC (Router + Net + Subnet) if it doesn't exist
         include_role:
           name: opentelekomcloud.vpc
         vars:
@@ -82,17 +105,17 @@
           subnet_name: "{{ test_subnet_name }}"
           state: present
 
-      # Create Security Group
-      - name: Create SecurityGroup
+      # Check if the Security Group exists
+      - name: Check if Security Group exists
+        openstack.cloud.security_group_info:
+          name: "{{ test_security_group_name }}"
+        register: sg_check
+
+      # Create Security Group only if it doesn't exist
+      - name: Create Security Group if it doesn't exist
         openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: RDS test SG created by APImon
-
-      # Query all available Availability zones
-      - name: Get Availability zones
-        opentelekomcloud.cloud.availability_zone_info:
-          # name: "{{ region }}"
-        register: azs
 
       # Create RDS instance MySQL
       - name: Create RDS instance MySQL
@@ -100,19 +123,19 @@
         opentelekomcloud.cloud.rds_instance:
           name: "{{ test_rds_name }}"
           state: present
-          availability_zone: "{{ azs['availability_zones'][0]['name'] }},{{ azs['availability_zones'][1]['name'] }}"
+          availability_zone: "{{ random_az }}"
           datastore_type: "{{ db_type }}"
-          datastore_version: "{{ db_version }}"
-          flavor: "{{ rds_flavors.rds_flavors[0].name }}"
-          ha_mode: "async"
+          datastore_version: "{{ latest_version }}"
+          flavor: "{{ smallest_flavor }}"
           router: "{{ test_router_name }}"
           network: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
           password: "{{ password }}"
-          volume_type: "{{ volume_type }}"
+          volume_type: "{{ storage_type }}"
+          region: "{{ region }}"
           volume_size: 40
-          backup_keepdays: 1
-          backup_timeframe: "02:00-03:00"
+          backup_keepdays: 0
+          # backup_timeframe: "02:00-03:00"
           wait: true
           timeout: 777
         register: rds_mysql
@@ -130,19 +153,19 @@
         opentelekomcloud.cloud.rds_instance:
           name: "{{ test_rds_name }}"
           state: present
-          availability_zone: "{{ azs['availability_zones'][0]['name'] }},{{ azs['availability_zones'][1]['name'] }}"
+          availability_zone: "{{ random_az }}"
           datastore_type: "{{  db_type }}"
-          datastore_version: "{{ db_version }}"
-          flavor: "{{ rds_flavors.rds_flavors[0].name }}"
-          ha_mode: "async"
+          datastore_version: "{{ latest_version }}"
+          flavor: "{{ smallest_flavor }}"
           router: "{{ test_router_name }}"
           network: "{{ test_network_name }}"
           security_group: "{{ test_security_group_name }}"
           password: "{{ password }}"
-          volume_type: "{{ volume_type }}"
+          volume_type: "{{ storage_type }}"
+          region: "{{ region }}"
           volume_size: 40
-          backup_keepdays: 1
-          backup_timeframe: "02:00-03:00"
+          backup_keepdays: 0
+          # backup_timeframe: "02:00-03:00"
           wait: true
           timeout: 777
         register: rds_pg
@@ -165,7 +188,7 @@
           name: "{{ rds.instance.id }}"
 
 
-      # Querying RDS backup info. You can use any of specified attributes, together or separately.
+      # Querying RDS backup info
       - name: Get RDS backup info
         opentelekomcloud.cloud.rds_backup_info:
           instance: "{{ rds.instance.id }}"
@@ -194,21 +217,5 @@
             tags:
               - 'service=rds'
               - "metric=delete_rds_mysql"
-
-          # Delete VPC and SUBNET
-          - name: Delete VPC
-            include_role:
-              name: opentelekomcloud.vpc
-            vars:
-              router_name: "{{ test_router_name }}"
-              network_name: "{{ test_network_name }}"
-              subnet_name: "{{ test_subnet_name }}"
-              state: absent
-
-          # Delete Security Group
-          - name: Delete SecurityGroup
-            openstack.cloud.security_group:
-              state: "absent"
-              name: "{{ test_security_group_name }}"
-
+     
           ignore_errors: true
