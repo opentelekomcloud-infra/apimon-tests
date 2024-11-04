@@ -1,0 +1,136 @@
+---
+
+# Scenario to test SFS Turbo deployment
+#
+- name: Scenario 46 - Create expand delete SFS Turbo share
+  hosts: localhost
+  collections:
+    - opentelekomcloud.cloud
+  vars:
+    prefix: scenario46-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        test_share_name: "{{ (prefix + '-test_share_apimon') }}"
+        test_security_group_name: "{{ (prefix + '-test_sg_apimon') }}"
+        test_router_name: "{{ (prefix + '-test_router_apimon') }}"
+        test_network_name: "{{ (prefix + '-test_network_apimon') }}"
+        test_subnet_name: "{{ (prefix + '-test_subnet_apimon') }}"
+
+    - block:
+
+      - name: Get Availability zones
+        opentelekomcloud.cloud.availability_zone_info:
+        register: azs
+
+      - name: Set Availability Zone
+        set_fact:
+          az: "{{ azs.availability_zones.0.name }}"
+
+      - name: Create VPC (Reouter + Net + Subnet)
+        import_role:
+          name: opentelekomcloud.vpc
+        vars:
+          router_name: "{{ test_router_name }}"
+          network_name: "{{ test_network_name }}"
+          subnet_name: "{{ test_subnet_name }}"
+          state: present
+
+      - name: Get VPC Info
+        opentelekomcloud.cloud.vpc_info:
+          name_or_id: "{{ test_router_name }}"
+        register: vpc_info
+
+      - name: Get vpc id
+        set_fact:
+          vpc_id: "{{ vpc_info.vpcs.0.id }}"
+
+      - name: Get subnet info
+        openstack.cloud.subnets_info:
+          filters:
+            name: "{{ test_subnet_name }}"
+        register: subnet
+
+      - name: Get subnet ID
+        set_fact:
+          subnet_id: "{{ subnet.subnets.0.network_id }}"
+
+      - name: Create Security group
+        openstack.cloud.security_group:
+          name: "{{ test_security_group_name }}"
+          description: Test security group created by APImon
+
+      - name: Get SecurityGroup info
+        openstack.cloud.security_group_info:
+          name: "{{ test_security_group_name }}"
+        register: security
+
+      - name: Get SecurityGroup ID
+        set_fact:
+          security_group_id: "{{ security.security_groups.0.id }}"
+
+      - name: Create Security Group Rule
+        openstack.cloud.security_group_rule:
+          security_group: "{{ test_security_group_name }}"
+          protocol: tcp
+          port_range_min: 2048
+          port_range_max: 2052
+          remote_ip_prefix: 0.0.0.0/0
+
+      - name: Create sfs turbo share
+        opentelekomcloud.cloud.sfsturbo_share:
+          name: "{{ test_share_name }}"
+          share_proto: "NFS"
+          share_type: "STANDARD"
+          size: 100
+          availability_zone: "{{ az }}"
+          vpc_id: "{{ vpc_id }}"
+          subnet_id: "{{ subnet_id }}"
+          security_group_id: "{{ security_group_id }}"
+        register: share
+
+      - name: Expand capacity sfs turbo share
+        opentelekomcloud.cloud.sfsturbo_share:
+          name: "{{ test_share_name }}"
+          size: 200
+        register: share
+
+      always:
+
+        - block:
+
+           - name: Delete sfs turbo share
+             opentelekomcloud.cloud.sfsturbo_share:
+               name: "{{ test_share_name }}"
+               state: absent
+
+           - name: Pause for 60 seconds
+             pause:
+               seconds: 60
+
+           - name: Delete SecurityGroupRule
+             openstack.cloud.security_group_rule:
+               state: absent
+               security_group: "{{ test_security_group_name }}"
+               protocol: tcp
+               port_range_min: 2048
+               port_range_max: 2052
+               remote_ip_prefix: 0.0.0.0/0
+        
+           - name: Delete SecurityGroup
+             openstack.cloud.security_group:
+               state: absent      
+               name: "{{ test_security_group_name }}"
+        
+           - name: Delete VPC
+             import_role:
+               name: opentelekomcloud.vpc
+             vars:
+               state: absent
+               router_name: "{{ test_router_name }}"
+               network_name: "{{ test_network_name }}"
+               subnet_name: "{{ test_subnet_name }}"
+               
+          ignore_errors: yes
