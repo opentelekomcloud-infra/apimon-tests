@@ -27,7 +27,11 @@
 
       - name: Set Availability Zone
         set_fact:
-          az: "{{ azs.availability_zones.0.name }}"
+          az: "{{ (azs['availability_zones'] | random).name }}"
+      
+      - name: debug az
+        debug:
+          msg: "{{ az }}"
 
       - name: Create VPC (Reouter + Net + Subnet)
         import_role:
@@ -38,24 +42,9 @@
           subnet_name: "{{ test_subnet_name }}"
           state: present
 
-      - name: Get VPC Info
-        opentelekomcloud.cloud.vpc_info:
-          name_or_id: "{{ test_router_name }}"
-        register: vpc_info
-
-      - name: Get vpc id
-        set_fact:
-          vpc_id: "{{ vpc_info.vpcs.0.id }}"
-
-      - name: Get subnet info
-        openstack.cloud.subnets_info:
-          filters:
-            name: "{{ test_subnet_name }}"
-        register: subnet
-
-      - name: Get subnet ID
-        set_fact:
-          subnet_id: "{{ subnet.subnets.0.network_id }}"
+      - set_fact:
+          vpc_id: "{{ net_router.router.id }}"
+          subnet_id: "{{ net_network.network.id }}"
 
       - name: Create Security group
         openstack.cloud.security_group:
