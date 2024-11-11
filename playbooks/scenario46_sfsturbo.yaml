@@ -29,10 +29,6 @@
         set_fact:
           az: "{{ (azs['availability_zones'] | random).name }}"
       
-      - name: debug az
-        debug:
-          msg: "{{ az }}"
-
       - name: Create VPC (Reouter + Net + Subnet)
         import_role:
           name: opentelekomcloud.vpc
