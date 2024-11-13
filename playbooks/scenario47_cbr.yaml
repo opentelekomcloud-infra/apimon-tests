@@ -66,10 +66,6 @@
           port_range_max: 22
           remote_ip_prefix: 0.0.0.0/0
 
-      - name: Get Availability zones
-        opentelekomcloud.cloud.availability_zone_info:
-        register: azs
-
       - name: Create Server in default AZ 
         openstack.cloud.server:
           auto_ip: false
@@ -130,11 +126,17 @@
       - name: Create restore point
         opentelekomcloud.cloud.cbr_restore_point:
           vault: "{{ test_vault_name }}"
+          wait: false
+        ignore_errors: true
 
-      - name: Query backups vor CBR vault
+      - name: Query backups for CBR vault
         opentelekomcloud.cloud.cbr_backup_info:
           vault: "{{ test_vault_name }}"
         register: backups
+        until: backups.backups[0].status == "available"
+        retries: 20 
+        delay: 30
+        ignore_errors: false
 
       - name: Get backup ID
         set_fact:
@@ -144,11 +146,15 @@
         opentelekomcloud.cloud.cbr_backup:
           name: "{{ backup_id }}"
           server_id: "{{ server_id }}"
-          power_on: false
+          power_on: true
 
-      - name: Pause for 3 minutes to complete ECS restoration
-        pause:
-          minutes: 3
+      - name: Query backups for CBR vault
+        opentelekomcloud.cloud.cbr_backup_info:
+          vault: "{{ test_vault_name }}"
+        register: backups
+        until: backups.backups[0].status == "available"
+        retries: 20
+        delay: 30
 
       always:
         # Clean created resourcesd
