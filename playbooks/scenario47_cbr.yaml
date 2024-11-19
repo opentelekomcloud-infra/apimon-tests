@@ -40,7 +40,7 @@
     - block:
 
     # Prepare infrastructure and ECS server         
-      - name: Create Keypair
+      - name: Create KeyPair
         include_role:
           name: opentelekomcloud.keypair
         vars:
@@ -53,12 +53,12 @@
         vars:
           network_name: "{{ test_network_name }}"
 
-      - name: Create SG
+      - name: Create Security Group
         openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: "dummy"
 
-      - name: Create SG-Rule
+      - name: Create Security Group Rule
         openstack.cloud.security_group_rule:
           security_group: "{{ test_security_group_name }}"
           protocol: tcp
@@ -66,7 +66,7 @@
           port_range_max: 22
           remote_ip_prefix: 0.0.0.0/0
 
-      - name: Create Server in default AZ 
+      - name: Create ECS Server in default AZ 
         openstack.cloud.server:
           auto_ip: false
           name: "{{ test_server_name }}"
@@ -76,12 +76,12 @@
           network: "{{ test_network_name }}"
         register: server
 
-      - name: Get server ID
+      - name: Get ECS server ID
         set_fact:
           server_id: "{{ server.server.id }}"
 
       # Create CBR backup policy create / update
-      - name: Create Backup Policy
+      - name: Create CBR Backup Policy
         opentelekomcloud.cloud.cbr_policy:
           name: "{{ test_policy_name }}"
           count_day_backups: 0
@@ -114,7 +114,7 @@
             size: 40
         register: vault
 
-      - name: Associate resouces CBR vault
+      - name: Associate resouces to CBR vault
         opentelekomcloud.cloud.cbr_vault:
           name: "{{ test_vault_name }}"
           resources:
@@ -123,7 +123,7 @@
           action: "associate_resources"
         register: vault
 
-      - name: Create restore point
+      - name: Create CBR restore point
         opentelekomcloud.cloud.cbr_restore_point:
           vault: "{{ test_vault_name }}"
           wait: false
@@ -138,11 +138,11 @@
         delay: 30
         ignore_errors: false
 
-      - name: Get backup ID
+      - name: Get CBR backup ID
         set_fact:
           backup_id: "{{ backups.backups.0.id }}"
 
-      - name: Restore ECS server from backup
+      - name: Restore ECS server from CBR backup
         opentelekomcloud.cloud.cbr_backup:
           name: "{{ backup_id }}"
           server_id: "{{ server_id }}"
@@ -160,12 +160,12 @@
         # Clean created resourcesd
         - block:
 
-            - name: Delete server
+            - name: Delete ECS server
               openstack.cloud.server:
                 state: absent
                 name: "{{ server_id }}"
 
-            - name: Delete Backup Vault
+            - name: Delete CBR server Backup Vault
               opentelekomcloud.cloud.cbr_vault:
                 name: "{{ test_vault_name }}"
                 state: absent
@@ -176,7 +176,7 @@
                 name: "{{ test_policy_name }}"
                 state: absent
 
-            - name: Delete SG
+            - name: Delete Security Group
               openstack.cloud.security_group:
                 name: "{{ test_security_group_name }}"
                 state: absent
@@ -188,7 +188,7 @@
                 state: absent
                 network_name: "{{ test_network_name }}"
 
-            - name: Delete KP
+            - name: Delete KeyPair
               include_role:
                 name: keypair
               vars:
