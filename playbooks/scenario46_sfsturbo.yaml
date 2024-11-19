@@ -38,23 +38,11 @@
           subnet_name: "{{ test_subnet_name }}"
           state: present
 
-      - set_fact:
-          vpc_id: "{{ net_router.router.id }}"
-          subnet_id: "{{ net_network.network.id }}"
-
-      - name: Create Security group
+      - name: Create Security Group
         openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
           description: Test security group created by APImon
-
-      - name: Get SecurityGroup info
-        openstack.cloud.security_group_info:
-          name: "{{ test_security_group_name }}"
         register: security
-
-      - name: Get SecurityGroup ID
-        set_fact:
-          security_group_id: "{{ security.security_groups.0.id }}"
 
       - name: Create Security Group Rule
         openstack.cloud.security_group_rule:
@@ -64,29 +52,28 @@
           port_range_max: 2052
           remote_ip_prefix: 0.0.0.0/0
 
-      - name: Create sfs turbo share
+      - name: Create SFS Turbo share
         opentelekomcloud.cloud.sfsturbo_share:
           name: "{{ test_share_name }}"
           share_proto: "NFS"
           share_type: "STANDARD"
           size: 100
           availability_zone: "{{ az }}"
-          vpc_id: "{{ vpc_id }}"
-          subnet_id: "{{ subnet_id }}"
-          security_group_id: "{{ security_group_id }}"
+          vpc_id: "{{ net_router.router.id }}"
+          subnet_id: "{{ net_network.network.id }}"
+          security_group_id: "{{ security.security_group.id }}"
         register: share
 
-      - name: Expand capacity sfs turbo share
+      - name: Expand capacity of SFS Turbo share
         opentelekomcloud.cloud.sfsturbo_share:
           name: "{{ test_share_name }}"
           size: 200
-        register: share
 
       always:
 
         - block:
 
-           - name: Delete sfs turbo share
+           - name: Delete SFS Turbo share
              opentelekomcloud.cloud.sfsturbo_share:
                name: "{{ test_share_name }}"
                state: absent
@@ -95,7 +82,7 @@
              pause:
                seconds: 60
 
-           - name: Delete SecurityGroupRule
+           - name: Delete Security Group Rule
              openstack.cloud.security_group_rule:
                state: absent
                security_group: "{{ test_security_group_name }}"
@@ -104,7 +91,7 @@
                port_range_max: 2052
                remote_ip_prefix: 0.0.0.0/0
         
-           - name: Delete SecurityGroup
+           - name: Delete Security Group
              openstack.cloud.security_group:
                state: absent      
                name: "{{ test_security_group_name }}"
