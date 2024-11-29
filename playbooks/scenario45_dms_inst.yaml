@@ -93,13 +93,13 @@
                 name: "{{ test_security_group_name }}"
                 state: absent
 
-           - name: Delete VPC (Router + Net + Subnet)
-             import_role:
-               name: opentelekomcloud.vpc
-             vars:
-               state: absent
-               router_name: "{{ test_router_name }}"
-               network_name: "{{ test_network_name }}"
-               subnet_name: "{{ test_subnet_name }}"
+            - name: Delete VPC (Router + Net + Subnet)
+              import_role:
+                name: opentelekomcloud.vpc
+              vars:
+                state: absent
+                router_name: "{{ test_router_name }}"
+                network_name: "{{ test_network_name }}"
+                subnet_name: "{{ test_subnet_name }}"
 
           ignore_errors: true
