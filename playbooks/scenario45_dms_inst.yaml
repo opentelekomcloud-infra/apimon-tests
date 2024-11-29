@@ -12,11 +12,12 @@
 
     - set_fact:
         test_security_group_name: "{{ (prefix + '-sg') }}"
-        test_vpc_name: "{{ ( prefix + '-vpc') }}"
-        test_subnet_name: "{{ ( prefix + '-subnet') }}"
         dms_inst_name: "{{ (prefix + '-dms_apimon') }}"
         dms_spec: dms.instance.kafka.cluster.c3.mini
-
+        test_router_name: "{{ (prefix + '-test_router_apimon') }}"
+        test_network_name: "{{ (prefix + '-test_network_apimon') }}"
+        test_subnet_name: "{{ (prefix + '-test_subnet_apimon') }}"
+        
     - block:
       - name: List DMS az
         script: "list_dms_az.py"
@@ -33,22 +34,16 @@
         args:
           executable: python3
         register: spec
-
-      - name: Create VPC
-        opentelekomcloud.cloud.vpc:
-          name: "{{ test_vpc_name }}"
-          cidr: "10.10.0.0/24"
+        
+      - name: Create VPC (Router + Net + Subnet)
+        import_role:
+          name: opentelekomcloud.vpc
+        vars:
+          router_name: "{{ test_router_name }}"
+          network_name: "{{ test_network_name }}"
+          subnet_name: "{{ test_subnet_name }}"
           state: present
-        register: newvpc
-
-      - name: Create subnet for VPC
-        opentelekomcloud.cloud.subnet:
-          name: "{{ test_subnet_name }}"
-          vpc_id: "{{ newvpc.vpc.id }}"
-          cidr: "10.10.0.0/27"
-          gateway_ip: "10.10.0.1"
-        register: sn
-
+          
       - name: Create SG
         openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
@@ -59,9 +54,9 @@
         opentelekomcloud.cloud.dms_instance:
           name: "{{ dms_inst_name }}"
           storage_space: "{{ spec.stdout_lines[0] }}"
-          vpc_id: "{{ newvpc.vpc.id }}"
+          vpc_id: "{{ net_router.router.id }}"
           security_group_id: "{{ newsg.security_group.id }}"
-          subnet_id: "{{ sn.subnet.id }}"
+          subnet_id: "{{ net_network.network.id }}"
           available_zones: [ "{{ az_id }}" ]
           product_id: "{{ spec.stdout_lines[1] }}"
           storage_spec_code: "{{ spec.stdout_lines[2] }}"
@@ -98,15 +93,13 @@
                 name: "{{ test_security_group_name }}"
                 state: absent
 
-            - name: Delete Subnet
-              opentelekomcloud.cloud.subnet:
-                name: "{{ test_subnet_name }}"
-                vpc_id: "{{ newvpc.vpc.id }}"
+            - name: Delete VPC (Router + Net + Subnet)
+              import_role:
+                name: opentelekomcloud.vpc
+              vars:
                 state: absent
-
-            - name: Delete vpc
-              opentelekomcloud.cloud.vpc:
-                name: "{{ test_vpc_name }}"
-                state: absent
+                router_name: "{{ test_router_name }}"
+                network_name: "{{ test_network_name }}"
+                subnet_name: "{{ test_subnet_name }}"
 
           ignore_errors: true
