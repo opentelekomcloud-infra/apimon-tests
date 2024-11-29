@@ -93,7 +93,7 @@
                 name: "{{ test_security_group_name }}"
                 state: absent
 
-           - name: Delete VPC
+           - name: Delete VPC (Router + Net + Subnet)
              import_role:
                name: opentelekomcloud.vpc
              vars:
