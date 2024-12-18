@@ -35,7 +35,9 @@
 
       # Set ECS flavor 
     - set_fact:
-        test_flavor: "{{ flavor_result.flavors | sort(attribute='ram') | map(attribute='name') | first }}"
+        # Due to issues with minimal flavor (not supported XEN flavors are selected ) flavor is hardcoded to specific one
+        # test_flavor: "{{ flavor_result.flavors | sort(attribute='ram') | map(attribute='name') | first }}"
+        test_flavor: s2.medium.2
 
     - block:
 
