@@ -14,7 +14,6 @@
         test_security_group_name: "{{ (prefix + '-sg') }}"
         dms_inst_name: "{{ (prefix + '-dms_apimon') }}"
         dms_spec: dms.instance.kafka.cluster.c3.mini
-        test_router_name: "{{ (prefix + '-test_router_apimon') }}"
         test_network_name: "{{ (prefix + '-test_network_apimon') }}"
         test_subnet_name: "{{ (prefix + '-test_subnet_apimon') }}"
         
@@ -35,15 +34,24 @@
           executable: python3
         register: spec
         
-      - name: Create VPC (Router + Net + Subnet)
-        import_role:
-          name: opentelekomcloud.vpc
-        vars:
-          router_name: "{{ test_router_name }}"
-          network_name: "{{ test_network_name }}"
-          subnet_name: "{{ test_subnet_name }}"
+      - name: Create vpc
+        opentelekomcloud.cloud.vpc:
+          name: "{{ test_network_name }}"
+          cidr: "192.168.0.0/16"
           state: present
-          
+        register: dmsvpc
+
+      - name: Create subnet
+        opentelekomcloud.cloud.subnet:
+          name: "{{ test_subnet_name }}"
+          vpc_id: "{{ dmsvpc.vpc.id }}"
+          cidr: "192.168.196.0/24"
+          gateway_ip: "192.168.196.1"
+          dns_list:
+            - "100.125.4.25"
+            - "8.8.8.8"
+        register: dmssubnet
+
       - name: Create SG
         openstack.cloud.security_group:
           name: "{{ test_security_group_name }}"
@@ -54,9 +62,9 @@
         opentelekomcloud.cloud.dms_instance:
           name: "{{ dms_inst_name }}"
           storage_space: "{{ spec.stdout_lines[0] }}"
-          vpc_id: "{{ net_router.router.id }}"
+          vpc_id: "{{ dmsvpc.vpc.id }}"
           security_group_id: "{{ newsg.security_group.id }}"
-          subnet_id: "{{ net_network.network.id }}"
+          subnet_id: "{{ dmssubnet.subnet.id }}"
           available_zones: [ "{{ az_id }}" ]
           product_id: "{{ spec.stdout_lines[1] }}"
           storage_spec_code: "{{ spec.stdout_lines[2] }}"
@@ -65,7 +73,7 @@
         opentelekomcloud.cloud.dms_instance_info:
           name: "{{ dms_inst_name }}"
         register: dmsinfo
-        retries: 20
+        retries: 50
         delay: 30
         until: dmsinfo.dms_instances[0].status == "RUNNING"
 
@@ -93,13 +101,15 @@
                 name: "{{ test_security_group_name }}"
                 state: absent
 
-            - name: Delete VPC (Router + Net + Subnet)
-              import_role:
-                name: opentelekomcloud.vpc
-              vars:
+            - name: Delete subnet
+              opentelekomcloud.cloud.subnet:
+                name: "{{ test_subnet_name }}"
+                vpc_id: "{{ dmsvpc.vpc.id }}"
                 state: absent
-                router_name: "{{ test_router_name }}"
-                network_name: "{{ test_network_name }}"
-                subnet_name: "{{ test_subnet_name }}"
+
+            - name: Delete vpc
+              opentelekomcloud.cloud.vpc:
+                name: "{{ test_network_name }}"
+                state: absent
 
           ignore_errors: true
