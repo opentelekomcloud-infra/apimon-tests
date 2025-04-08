@@ -14,7 +14,7 @@
         test_security_group_name: "{{ (prefix + '-sg') }}"
         dms_inst_name: "{{ (prefix + '-dms_apimon') }}"
         dms_spec: dms.instance.kafka.cluster.c3.mini
-        test_network_name: "{{ (prefix + '-test_network_apimon') }}"
+        test_vpc_name: "{{ (prefix + '-test_vpc_apimon') }}"
         test_subnet_name: "{{ (prefix + '-test_subnet_apimon') }}"
         
     - block:
@@ -36,7 +36,7 @@
         
       - name: Create vpc
         opentelekomcloud.cloud.vpc:
-          name: "{{ test_network_name }}"
+          name: "{{ test_vpc_name }}"
           cidr: "192.168.0.0/16"
           state: present
         register: dmsvpc
@@ -73,7 +73,7 @@
         opentelekomcloud.cloud.dms_instance_info:
           name: "{{ dms_inst_name }}"
         register: dmsinfo
-        retries: 50
+        retries: 30
         delay: 30
         until: dmsinfo.dms_instances[0].status == "RUNNING"
 
@@ -109,7 +109,7 @@
 
             - name: Delete vpc
               opentelekomcloud.cloud.vpc:
-                name: "{{ test_network_name }}"
+                name: "{{ test_vpc_name }}"
                 state: absent
 
           ignore_errors: true
