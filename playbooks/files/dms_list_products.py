@@ -2,8 +2,11 @@
 
 import openstack
 import sys
+from otcextensions import sdk
 
+openstack.enable_logging(True)
 conn = openstack.connect()
+sdk.register_otc_extensions(conn)
 
 spec = sys.argv[1]
 for raw in conn.dms.products():
