@@ -171,9 +171,6 @@
                 state: absent
               register: vault
 
-            - debug:
-                    msg: "{{ vault }}"
-
             - name: Query CBR vault deletion job
               opentelekomcloud.cloud.cbr_backup_info:
                 vault: "{{ test_vault_name }}"
@@ -184,9 +181,6 @@
               delay: 30
               ignore_errors: true
             
-            - debug:
-                    msg: "{{ backups.failed }}"
-
             - name: Delete CBR backup policy
               opentelekomcloud.cloud.cbr_policy:
                 name: "{{ test_policy_name }}"
