@@ -35,9 +35,7 @@
 
       # Set ECS flavor 
     - set_fact:
-        # Due to issues with minimal flavor (not supported XEN flavors are selected ) flavor is hardcoded to specific one
-        # test_flavor: "{{ flavor_result.flavors | sort(attribute='ram') | map(attribute='name') | first }}"
-        test_flavor: s2.medium.2
+        test_flavor: "{{ flavor_result.flavors | selectattr('name', 'match', '^s') | sort(attribute='ram') | map(attribute='name') | first }}"
 
     - block:
 
@@ -172,6 +170,22 @@
                 name: "{{ test_vault_name }}"
                 state: absent
               register: vault
+
+            - debug:
+                    msg: "{{ vault }}"
+
+            - name: Query CBR vault deletion job
+              opentelekomcloud.cloud.cbr_backup_info:
+                vault: "{{ test_vault_name }}"
+              register: backups
+              until: (backups.backups | default([])) | length == 0
+              #until: backups.backups[0].status == "available"
+              retries: 20
+              delay: 30
+              ignore_errors: true
+            
+            - debug:
+                    msg: "{{ backups.failed }}"
 
             - name: Delete CBR backup policy
               opentelekomcloud.cloud.cbr_policy:
