@@ -8,16 +8,6 @@ instance_name = sys.argv[1]
 conn = openstack.connect()
 sdk.register_otc_extensions(conn)
 
-#for fgs in conn.function_graph.functions():
-#    print(fgs)
-
-#for fgs in conn.function_graph.functions():
-#    if fgs["func_name"] == instance_name:
-#      urn = fgs["func_urn"]
-
-
-#print(urn)
-
 func_attrs = {
     'func_name': instance_name,
     'package': 'default',

@@ -5,16 +5,7 @@ import sys
 
 conn = openstack.connect()
 
-#for fgs in conn.function_graph.functions():
-#    print(fgs)
-
 instance_name = sys.argv[1]
-#instance_name = "FGTest1"
-#vpc_id = sys.argv[2]
-#subnet_id = sys.argv[3]
-#sg_id = sys.argv[4]
-#inst_pw = sys.argv[5]
-#az_name = sys.argv[6]
 
 for fgs in conn.function_graph.functions():
     if fgs["func_name"] == instance_name:
