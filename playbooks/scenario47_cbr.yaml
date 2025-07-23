@@ -23,7 +23,6 @@
           openstack.cloud.server:
             name: "{{ item.id }}"
             state: absent
-            terminate_volume: true
           loop: "{{ orphan_servers }}"
           when: orphan_servers | length > 0
 
@@ -57,29 +56,10 @@
           loop: "{{ orphan_backups }}"
           when: orphan_backups | length > 0
 
-        - name: List orphaned CBR vaults
-          script: "list_vaults.py"
+        - name: Delete orphaned CBR vault
+          script: "delete_vault.py {{ prefix }}"
           args:
             executable: python3
-          register: vault_lookup_results
-
-        - name: Extract orphaned vault names with prefix
-          set_fact:
-            orphan_vaults: >-
-              {{
-                vault_lookup_results.stdout_lines
-                | map('regex_findall', 'name=([a-zA-Z0-9\-]+)')
-                | flatten
-                | select("match", "^scenario47-")
-                | list
-              }}
-
-        - name: Delete orphaned CBR vault
-          opentelekomcloud.cloud.cbr_vault:
-            name: "{{ item }}"
-            state: absent
-          loop: "{{ orphan_vaults }}"
-          when: orphan_vaults | length > 0
 
         - name: Delete orphaned keypairs
           openstack.cloud.keypair_info:
@@ -245,7 +225,6 @@
               openstack.cloud.server:
                 state: absent
                 name: "{{ server_id }}"
-                terminate_volume: true
 
             - name: Delete CBR server Backup Vault
               opentelekomcloud.cloud.cbr_vault:
