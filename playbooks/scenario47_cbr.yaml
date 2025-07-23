@@ -3,12 +3,99 @@
 # Scenario to test CBR ECS server backup
 # A VPC is created and VM is being started in different AZs
 
-- name: Scenario 47 - CBR server backup 
+- name: Scenario 47 - CBR server backup
   hosts: localhost
   vars:
     prefix: scenario47-
 
   tasks:
+
+    - block:
+        - name: Get all ECS servers
+          openstack.cloud.server_info:
+          register: all_servers
+
+        - name: Filter orphan ECS servers
+          set_fact:
+            orphan_servers: "{{ all_servers.servers | selectattr('name', 'search', '^' + prefix) | list }}"
+
+        - name: Delete orphan ECS servers
+          openstack.cloud.server:
+            name: "{{ item.id }}"
+            state: absent
+            terminate_volume: true
+          loop: "{{ orphan_servers }}"
+          when: orphan_servers | length > 0
+
+        - name: Get all EVS disks
+          openstack.cloud.volume_info:
+          register: volumes
+
+        - name: Filter orphaned EVS disks
+          set_fact:
+            orphan_evs: "{{ volumes.volumes | selectattr('name', 'search', '^' + prefix) | map(attribute='name') | list }}"
+
+        - name: Delete orphaned EVS disks
+          openstack.cloud.volume:
+            name: "{{ item }}"
+            state: absent
+          loop: "{{ orphan_evs }}"
+          when: orphan_evs | length > 0
+
+        - name: Get all backups
+          opentelekomcloud.cloud.cbr_backup_info:
+          register: all_backups
+
+        - name: Filter orphaned backups by prefix
+          set_fact:
+            orphan_backups: "{{ all_backups.backups | selectattr('resource_name', 'search','^' + prefix) | list }}"
+
+        - name: Delete orphaned CBR backups
+          opentelekomcloud.cloud.cbr_backup:
+            name: "{{ item.id }}"
+            state: absent
+          loop: "{{ orphan_backups }}"
+          when: orphan_backups | length > 0
+
+        - name: List orphaned CBR vaults
+          script: "list_vaults.py"
+          args:
+            executable: python3
+          register: vault_lookup_results
+
+        - name: Extract orphaned vault names with prefix
+          set_fact:
+            orphan_vaults: >-
+              {{
+                vault_lookup_results.stdout_lines
+                | map('regex_findall', 'name=([a-zA-Z0-9\-]+)')
+                | flatten
+                | select("match", "^scenario47-")
+                | list
+              }}
+
+        - name: Delete orphaned CBR vault
+          opentelekomcloud.cloud.cbr_vault:
+            name: "{{ item }}"
+            state: absent
+          loop: "{{ orphan_vaults }}"
+          when: orphan_vaults | length > 0
+
+        - name: Delete orphaned keypairs
+          openstack.cloud.keypair_info:
+          register: orphan_kps
+
+        - name: Delete orphaned keypairs (match prefix)
+          include_role:
+            name: keypair
+          vars:
+            keypair_name: "{{ item.name }}"
+            state: absent
+            force_delete_key: true
+          loop: "{{ orphan_kps.keypairs | selectattr('name', 'search', '^' + prefix) | list }}"
+      ignore_errors: true
+
+    # Begin test scenario
     - set_fact:
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
 
@@ -20,6 +107,7 @@
         test_vault_name: "{{ ( prefix + '-vault' ) }}"
         test_server_name: "{{ (prefix + '-test_server_apimon') }}"
         test_policy_name: "{{ (prefix + '-test_policy_apimon') }}"
+        test_backup_name: "{{ prefix }}{{ (99999999 | random | to_uuid | hash('md5'))[:4] }}"
 
     - name: Query specific flavor
       openstack.cloud.compute_flavor_info:
@@ -29,149 +117,140 @@
       openstack.cloud.image_info:
       register: images
 
-      # Set CentOS latest
     - set_fact:
         test_image: "{{ images.images | selectattr( 'name', 'search', 'CentOS') | map(attribute='name') | first }}"
 
-      # Set ECS flavor 
     - set_fact:
-        # Due to issues with minimal flavor (not supported XEN flavors are selected ) flavor is hardcoded to specific one
-        # test_flavor: "{{ flavor_result.flavors | sort(attribute='ram') | map(attribute='name') | first }}"
         test_flavor: s2.medium.2
 
     - block:
 
-    # Prepare infrastructure and ECS server         
-      - name: Create KeyPair
-        include_role:
-          name: opentelekomcloud.keypair
-        vars:
-          keypair_name: "{{ test_keypair_name }}"
-          state: present
+        - name: Create KeyPair
+          include_role:
+            name: opentelekomcloud.keypair
+          vars:
+            keypair_name: "{{ test_keypair_name }}"
+            state: present
 
-      - name: Create VPC
-        include_role:
-          name: vpc
-        vars:
-          network_name: "{{ test_network_name }}"
+        - name: Create VPC
+          include_role:
+            name: vpc
+          vars:
+            network_name: "{{ test_network_name }}"
 
-      - name: Create Security Group
-        openstack.cloud.security_group:
-          name: "{{ test_security_group_name }}"
-          description: "dummy"
+        - name: Create Security Group
+          openstack.cloud.security_group:
+            name: "{{ test_security_group_name }}"
+            description: "dummy"
 
-      - name: Create Security Group Rule
-        openstack.cloud.security_group_rule:
-          security_group: "{{ test_security_group_name }}"
-          protocol: tcp
-          port_range_min: 22
-          port_range_max: 22
-          remote_ip_prefix: 0.0.0.0/0
+        - name: Create Security Group Rule
+          openstack.cloud.security_group_rule:
+            security_group: "{{ test_security_group_name }}"
+            protocol: tcp
+            port_range_min: 22
+            port_range_max: 22
+            remote_ip_prefix: 0.0.0.0/0
 
-      - name: Create ECS Server in default AZ 
-        openstack.cloud.server:
-          auto_ip: false
-          name: "{{ test_server_name }}"
-          image: "{{ test_image }}"
-          flavor: "{{ test_flavor }}"
-          key_name: "{{ test_keypair_name }}"
-          network: "{{ test_network_name }}"
-        register: server
+        - name: Create ECS Server in default AZ
+          openstack.cloud.server:
+            auto_ip: false
+            name: "{{ test_server_name }}"
+            image: "{{ test_image }}"
+            flavor: "{{ test_flavor }}"
+            key_name: "{{ test_keypair_name }}"
+            network: "{{ test_network_name }}"
+          register: server
 
-      - name: Get ECS server ID
-        set_fact:
-          server_id: "{{ server.server.id }}"
+        - name: Get ECS server ID
+          set_fact:
+            server_id: "{{ server.server.id }}"
 
-      # Create CBR backup policy create / update
-      - name: Create CBR Backup Policy
-        opentelekomcloud.cloud.cbr_policy:
-          name: "{{ test_policy_name }}"
-          count_day_backups: 0
-          count_month_backups: 0
-          retention_duration_days: 5
-          count_year_backups: 0
-          timezone: "UTC+08:00"
-          pattern:
-            - "FREQ=WEEKLY;BYHOUR=14;BYDAY=MO,TU,WE,TH,FR,SA,SU;BYMINUTE=00"
+        - name: Create CBR Backup Policy
+          opentelekomcloud.cloud.cbr_policy:
+            name: "{{ test_policy_name }}"
+            count_day_backups: 0
+            count_month_backups: 0
+            retention_duration_days: 5
+            count_year_backups: 0
+            timezone: "UTC+08:00"
+            pattern:
+              - "FREQ=WEEKLY;BYHOUR=14;BYDAY=MO,TU,WE,TH,FR,SA,SU;BYMINUTE=00"
 
-      - name: Update CBR backup policy
-        opentelekomcloud.cloud.cbr_policy:
-          name: "{{ test_policy_name }}"
-          count_day_backups: 5
-          pattern:
-            - "FREQ=WEEKLY;BYHOUR=14;BYDAY=MO,TU,WE,TH,FR,SA,SU;BYMINUTE=00"
-          is_enabled: False
+        - name: Update CBR backup policy
+          opentelekomcloud.cloud.cbr_policy:
+            name: "{{ test_policy_name }}"
+            count_day_backups: 5
+            pattern:
+              - "FREQ=WEEKLY;BYHOUR=14;BYDAY=MO,TU,WE,TH,FR,SA,SU;BYMINUTE=00"
+            is_enabled: False
 
-      # CBR create vault create backup and restore ECS server
-      - name: Create CBR server Backup Vault
-        opentelekomcloud.cloud.cbr_vault:
-          name: "{{ test_vault_name }}"
-          auto_bind: false
-          auto_expand: false
-          policy: "{{ test_policy_name }}"
-          billing:
-            consistent_level: "crash_consistent"
-            object_type: "server"
-            protect_type: "backup"
-            size: 40
-        register: vault
+        - name: Create CBR server Backup Vault
+          opentelekomcloud.cloud.cbr_vault:
+            name: "{{ test_vault_name }}"
+            auto_bind: false
+            auto_expand: false
+            policy: "{{ test_policy_name }}"
+            billing:
+              consistent_level: "crash_consistent"
+              object_type: "server"
+              protect_type: "backup"
+              size: 40
+          register: vault
 
-      - name: Associate resouces to CBR vault
-        opentelekomcloud.cloud.cbr_vault:
-          name: "{{ test_vault_name }}"
-          resources:
-            - id: "{{ server_id }}"
-              type: "OS::Nova::Server"
-          action: "associate_resources"
-        register: vault
+        - name: Associate resources to CBR vault
+          opentelekomcloud.cloud.cbr_vault:
+            name: "{{ test_vault_name }}"
+            resources:
+              - id: "{{ server_id }}"
+                type: "OS::Nova::Server"
+            action: "associate_resources"
+          register: vault
 
-      - name: Create CBR restore point
-        opentelekomcloud.cloud.cbr_restore_point:
-          vault: "{{ test_vault_name }}"
-          wait: false
-        ignore_errors: true
+        - name: Create CBR restore point
+          opentelekomcloud.cloud.cbr_restore_point:
+            vault: "{{ test_vault_name }}"
+            wait: false
+          ignore_errors: true
 
-      - name: Query backups for CBR vault
-        opentelekomcloud.cloud.cbr_backup_info:
-          vault: "{{ test_vault_name }}"
-        register: backups
-        until: backups.backups[0].status == "available"
-        retries: 20 
-        delay: 30
-        ignore_errors: false
+        - name: Query backups for CBR vault
+          opentelekomcloud.cloud.cbr_backup_info:
+            vault: "{{ test_vault_name }}"
+          register: backups
+          until: backups.backups[0].status == "available"
+          retries: 20
+          delay: 30
+          ignore_errors: false
 
-      - name: Get CBR backup ID
-        set_fact:
-          backup_id: "{{ backups.backups.0.id }}"
+        - name: Get CBR backup ID
+          set_fact:
+            backup_id: "{{ backups.backups.0.id }}"
 
-      - name: Restore ECS server from CBR backup
-        opentelekomcloud.cloud.cbr_backup:
-          name: "{{ backup_id }}"
-          server_id: "{{ server_id }}"
-          power_on: true
+        - name: Restore ECS server from CBR backup
+          opentelekomcloud.cloud.cbr_backup:
+            name: "{{ backup_id }}"
+            server_id: "{{ server_id }}"
+            power_on: true
 
-      - name: Query backups for CBR vault
-        opentelekomcloud.cloud.cbr_backup_info:
-          vault: "{{ test_vault_name }}"
-        register: backups
-        until: backups.backups[0].status == "available"
-        retries: 20
-        delay: 30
+        - name: Query backups for CBR vault (again)
+          opentelekomcloud.cloud.cbr_backup_info:
+            vault: "{{ test_vault_name }}"
+          register: backups
+          until: backups.backups[0].status == "available"
+          retries: 20
+          delay: 30
 
       always:
-        # Clean created resourcesd
         - block:
-
             - name: Delete ECS server
               openstack.cloud.server:
                 state: absent
                 name: "{{ server_id }}"
+                terminate_volume: true
 
             - name: Delete CBR server Backup Vault
               opentelekomcloud.cloud.cbr_vault:
                 name: "{{ test_vault_name }}"
                 state: absent
-              register: vault
 
             - name: Delete CBR backup policy
               opentelekomcloud.cloud.cbr_policy:
@@ -197,5 +276,5 @@
                 keypair_name: "{{ test_keypair_name }}"
                 state: absent
                 force_delete_key: true
-
           ignore_errors: true
+
