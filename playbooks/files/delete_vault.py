@@ -9,6 +9,6 @@ conn = openstack.connect()
 sdk.register_otc_extensions(conn)
 
 # openstack.enable_logging(True)
-name=sys.argv[1]
+name = sys.argv[1]
 for vault in conn.cbr.vaults(name=name):
     conn.cbr.delete_vault(vault=vault)

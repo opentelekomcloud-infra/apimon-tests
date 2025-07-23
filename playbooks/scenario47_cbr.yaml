@@ -141,7 +141,11 @@
             network: "{{ test_network_name }}"
           register: server
 
-        - name: Get ECS server ID
+        - name: Set system volume ID
+          set_fact:
+            system_volume_id: "{{ server.server.volumes[0].id }}"
+
+        - name: Set ECS server ID
           set_fact:
             server_id: "{{ server.server.id }}"
 
@@ -239,6 +243,11 @@
             - name: Delete Security Group
               openstack.cloud.security_group:
                 name: "{{ test_security_group_name }}"
+                state: absent
+
+            - name: Delete orphaned EVS disks
+              openstack.cloud.volume:
+                name: "{{ system_volume_id }}"
                 state: absent
 
             - name: Delete VPC
