@@ -193,6 +193,7 @@
         - name: Create CBR restore point
           opentelekomcloud.cloud.cbr_restore_point:
             vault: "{{ test_vault_name }}"
+            name: "{{ test_backup_name }}"
             wait: false
           ignore_errors: true
 
