@@ -41,21 +41,6 @@
           loop: "{{ orphan_evs }}"
           when: orphan_evs | length > 0
 
-        - name: Get all backups
-          opentelekomcloud.cloud.cbr_backup_info:
-          register: all_backups
-
-        - name: Filter orphaned backups by prefix
-          set_fact:
-            orphan_backups: "{{ all_backups.backups | selectattr('resource_name', 'search','^' + prefix) | list }}"
-
-        - name: Delete orphaned CBR backups
-          opentelekomcloud.cloud.cbr_backup:
-            name: "{{ item.id }}"
-            state: absent
-          loop: "{{ orphan_backups }}"
-          when: orphan_backups | length > 0
-
         - name: Delete orphaned CBR vault
           script: "delete_vault.py {{ prefix }}"
           args:
@@ -87,7 +72,6 @@
         test_vault_name: "{{ ( prefix + '-vault' ) }}"
         test_server_name: "{{ (prefix + '-test_server_apimon') }}"
         test_policy_name: "{{ (prefix + '-test_policy_apimon') }}"
-        test_backup_name: "{{ prefix }}{{ (99999999 | random | to_uuid | hash('md5'))[:4] }}"
 
     - name: Query specific flavor
       openstack.cloud.compute_flavor_info:
@@ -193,7 +177,6 @@
         - name: Create CBR restore point
           opentelekomcloud.cloud.cbr_restore_point:
             vault: "{{ test_vault_name }}"
-            name: "{{ test_backup_name }}"
             wait: false
           ignore_errors: true
 
