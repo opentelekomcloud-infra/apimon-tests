@@ -98,7 +98,7 @@
       # Create VPC and Subnet only if the network doesn't exist
       - name: Create VPC (Router + Net + Subnet) if it doesn't exist
         include_role:
-          name: opentelekomcloud.vpc
+          name: vpc
         vars:
           router_name: "{{ test_router_name }}"
           network_name: "{{ test_network_name }}"
@@ -134,8 +134,8 @@
           volume_type: "{{ storage_type }}"
           region: "{{ region }}"
           volume_size: 40
-          backup_keepdays: 0
-          # backup_timeframe: "02:00-03:00"
+          backup_keepdays: 1
+          backup_timeframe: "02:00-03:00"
           wait: true
           timeout: 777
         register: rds_mysql
@@ -164,8 +164,8 @@
           volume_type: "{{ storage_type }}"
           region: "{{ region }}"
           volume_size: 40
-          backup_keepdays: 0
-          # backup_timeframe: "02:00-03:00"
+          backup_keepdays: 1
+          backup_timeframe: "02:00-03:00"
           wait: true
           timeout: 777
         register: rds_pg
