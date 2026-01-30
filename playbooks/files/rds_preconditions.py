@@ -62,8 +62,8 @@ if __name__ == "__main__":
 
         # Iterate over storage types in data1
         for storage in storage_types:
-            az_status = storage.get("az_status", {})
-            status = next((v for v in az_status.values() if v == "normal"), None)
+            az_stat = storage.get("az_status", {})
+            status = next((v for v in az_stat.values() if v == "normal"), None)
             if status == "normal":
                 storage_type = storage["name"]
                 break  # Exit the loop after finding the first match
