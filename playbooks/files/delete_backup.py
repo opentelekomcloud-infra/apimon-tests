@@ -16,7 +16,7 @@ for backup in conn.block_storage.backups():
                   'multiple')
         if backup.status in statuses:
             for count in openstack.utils.iterate_timeout(
-                    timeout=6000, message='Wait for backup status failed',
+                    timeout=1200, message='Wait for backup status failed',
                     wait=5):
                 backup = conn.block_storage.get_backup(backup.id)
                 if backup.status not in statuses:
