@@ -4,6 +4,8 @@ import openstack
 import sys
 
 
+statuses = ['creating', 'restoring', 'deleting'] 
+
 conn = openstack.connect()
 
 backup_found = False
@@ -12,12 +14,12 @@ for backup in conn.block_storage.backups():
         if backup_found:
             print('Backup with this name was already found, potentially'
                   'multiple')
-        if backup.status in ['creating', 'restoring']:
+        if backup.status in statuses:
             for count in openstack.utils.iterate_timeout(
                     timeout=6000, message='Wait for backup status failed',
                     wait=5):
                 backup = conn.block_storage.get_backup(backup.id)
-                if backup.status != 'creating':
+                if backup.status not in statuses:
                     break
         backup_found = True
         conn.block_storage.delete_backup(backup.id)
