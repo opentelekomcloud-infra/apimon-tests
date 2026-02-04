@@ -4,7 +4,7 @@ import openstack
 import sys
 
 
-statuses = ['creating', 'restoring', 'deleting'] 
+statuses = ['creating', 'restoring', 'deleting']
 
 conn = openstack.connect()
 
