@@ -62,10 +62,10 @@ if __name__ == "__main__":
 
         # Iterate over storage types in data1
         for storage in storage_types:
-            if group_type in storage["support_compute_group_type"]:
+            az_stat = storage.get("az_status", {})
+            status = next((v for v in az_stat.values() if v == "normal"), None)
+            if status == "normal":
                 storage_type = storage["name"]
-                if storage_type == "COMMON":
-                    continue
                 break  # Exit the loop after finding the first match
 
         # Output the result as JSON
