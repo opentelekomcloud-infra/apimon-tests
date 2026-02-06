@@ -18,7 +18,7 @@ for vault in conn.cbr.vaults(name=sys.argv[1]):
                 wait=5):
             try:
                 vault = conn.cbr.get_vault(vault.id)
-            except os_exc.ResourceNotFound:   # Excepction when the Vault was already deleted 
+            except os_exc.ResourceNotFound:
                 break
 
             if vault.billing.get('status') not in statuses:
