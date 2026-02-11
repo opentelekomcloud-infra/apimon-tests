@@ -1,0 +1,67 @@
+---
+
+# Scenario 24: SMN
+#
+
+- name: Scenario 24 - basic SMN scenario
+  hosts: localhost
+  vars:
+    prefix: scenario24-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+                test_smn_topic: "{{ (prefix + 'topic') }}"
+      
+    - debug:
+          msg: "Topic name is: {{ test_smn_topic }}"
+
+ 
+    - block:
+
+      - name: Create SMN Topic
+        script: "create_smn_topic.py {{ test_smn_topic }}"
+        args:
+          executable: python3
+        register: result
+
+      - name: Get topic_urn
+        set_fact:
+          topic_urn: "{{ result.stdout.strip() }}"
+
+      - name: Print SMN Topic Urn
+        debug:
+          var: topic_urn
+
+      - name: Query topics
+        script: "list_smn_topics.py"
+        args:
+          executable: python3
+        register: result
+
+      - name: Print list of Topics
+        debug:
+          var: result.stdout
+    
+      - name: Query created topic
+        script: "get_smn_topic.py {{ topic_urn }}"
+        args:
+          executable: python3
+        register: result
+
+      - name: Print Topic Detail
+        debug:
+          var: result.stdout
+
+      always:
+        - block:
+          - name: Delete SMN Topic
+            script: "delete_smn_topic.py {{ topic_urn }}"
+            args:
+              executable: python3
+          ignore_errors: true
+      
+      
+        
+     
