@@ -192,6 +192,10 @@
       - name: Get RDS backup info
         opentelekomcloud.cloud.rds_backup_info:
           instance: "{{ rds.instance.id }}"
+        register: backup_info
+        retries: 5
+        delay: 60
+        until: (backup_info.rds_backups | default([]) | length) > 0
     
       always:
         - block:
