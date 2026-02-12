@@ -14,9 +14,9 @@ sdk.register_otc_extensions(conn)
 #templates = list(conn.smn.templates())
 
 # Retrieve topics
-topics = list(conn.smn.topics())
+result = list(conn.smn.topics())
 
 # Print results
-for t in topics:
+for t in result:
     print(f"{t.id}  {t.name}")
 

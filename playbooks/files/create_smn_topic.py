@@ -10,15 +10,12 @@ conn = openstack.connect()
 
 sdk.register_otc_extensions(conn)
 
-#topic = list(conn.smn.topics())
-#templates = list(conn.smn.templates())
-
 topic_name = sys.argv[1]
 
 attrs = {
     'name': topic_name
 }
 
-topic = conn.smn.create_topic(**attrs)
+result = conn.smn.create_topic(**attrs)
 
-print(topic.id)
+print(result.id)

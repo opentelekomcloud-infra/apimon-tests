@@ -11,7 +11,12 @@ conn = openstack.connect()
 sdk.register_otc_extensions(conn)
 
 topic_urn = sys.argv[1]
+display_name = sys.argv[2]
 
-result = conn.smn.delete_topic(topic_urn)
+attrs = {
+    'display_name': display_name
+}
 
-print(result)
+result = conn.smn.update_topic(topic_urn,**attrs)
+
+print(result.id)

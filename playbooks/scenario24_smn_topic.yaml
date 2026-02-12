@@ -3,7 +3,7 @@
 # Scenario 24: SMN
 #
 
-- name: Scenario 24 - basic SMN scenario
+- name: Scenario 24 - basic SMN lifecycle scenario
   hosts: localhost
   vars:
     prefix: scenario24-
@@ -12,54 +12,57 @@
         prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
 
     - set_fact:
-                test_smn_topic: "{{ (prefix + 'topic') }}"
-      
+        test_smn_topic: "{{ (prefix + 'topic') }}"
+    
     - debug:
-          msg: "Topic name is: {{ test_smn_topic }}"
+        msg: "Topic name: {{ test_smn_topic }}"
 
- 
     - block:
 
       - name: Create SMN Topic
         script: "create_smn_topic.py {{ test_smn_topic }}"
         args:
           executable: python3
-        register: result
+        register: result_create_topic
 
       - name: Get topic_urn
         set_fact:
-          topic_urn: "{{ result.stdout.strip() }}"
+          topic_urn: "{{ result_create_topic.stdout.strip() }}"
 
-      - name: Print SMN Topic Urn
-        debug:
-          var: topic_urn
-
-      - name: Query topics
+      - name: Query Topics
         script: "list_smn_topics.py"
         args:
           executable: python3
-        register: result
-
-      - name: Print list of Topics
-        debug:
-          var: result.stdout
-    
-      - name: Query created topic
+      
+      - name: Query Created Topic
         script: "get_smn_topic.py {{ topic_urn }}"
         args:
           executable: python3
-        register: result
+ 
+      - name: Update SMN Topic
+        script: "update_smn_topic.py {{ topic_urn }} display_{{ test_smn_topic }}"
+        args:
+          executable: python3
+ 
+      - name: Update Topic Policy
+        script: "update_smn_topic_policy.py {{ topic_urn }}"
+        args:
+          executable: python3
 
-      - name: Print Topic Detail
-        debug:
-          var: result.stdout
-
+      - name: Query Topic Policy
+        script: "get_smn_topic_policy.py {{ topic_urn }}"
+        args:
+          executable: python3
+        
+      
       always:
         - block:
+
           - name: Delete SMN Topic
             script: "delete_smn_topic.py {{ topic_urn }}"
             args:
               executable: python3
+          
           ignore_errors: true
       
       
