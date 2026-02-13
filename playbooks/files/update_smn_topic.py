@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import openstack
-
 import sys
+
 from otcextensions import sdk
 
 openstack.enable_logging(True)
@@ -17,6 +17,4 @@ attrs = {
     'display_name': display_name
 }
 
-result = conn.smn.update_topic(topic_urn,**attrs)
-
-print(result.id)
+conn.smn.update_topic(topic_urn, **attrs)

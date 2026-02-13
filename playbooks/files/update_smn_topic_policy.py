@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import openstack
-
 import sys
+
 from otcextensions import sdk
 
 openstack.enable_logging(True)
@@ -33,6 +33,4 @@ attrs = {
     "value": policy
 }
 
-result = conn.smn.topic_attributes(topic_urn,name="access_policy", **attrs)
-
-print(result)
+conn.smn.topic_attributes(topic_urn, name="access_policy", **attrs)

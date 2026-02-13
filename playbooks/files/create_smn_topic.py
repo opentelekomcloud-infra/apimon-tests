@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import openstack
-
 import sys
+
 from otcextensions import sdk
 
 openstack.enable_logging(True)
