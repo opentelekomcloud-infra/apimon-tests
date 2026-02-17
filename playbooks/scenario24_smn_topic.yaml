@@ -1,9 +1,7 @@
 ---
+#  Scenario to test basic SMN topic lifecycle scenario
 
-# Scenario 24: SMN
-#
-
-- name: Scenario 24 - basic SMN lifecycle scenario
+- name: Scenario 24 - SMN topic
   hosts: localhost
   vars:
     prefix: scenario24-
