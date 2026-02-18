@@ -1,7 +1,7 @@
 ---
 #  Scenario to test basic SMN subscription lifecycle scenario
 
-- name: Scenario 25 - SMN subsription
+- name: Scenario 25 - SMN subscription
   hosts: localhost
   vars:
     prefix: scenario25-
