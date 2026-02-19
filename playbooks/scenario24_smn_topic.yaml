@@ -1,7 +1,7 @@
 ---
 #  Scenario to test basic SMN topic lifecycle scenario
 
-- name: Scenario 24 - SMN topic
+- name: Scenario 24 - SMN Topic
   hosts: localhost
   vars:
     prefix: scenario24-
@@ -12,9 +12,7 @@
     - set_fact:
         test_smn_topic: "{{ (prefix + 'topic') }}"
     
-    - debug:
-        msg: "Topic name: {{ test_smn_topic }}"
-
+   
     - block:
 
       - name: Create SMN Topic
@@ -26,6 +24,9 @@
       - name: Get topic_urn
         set_fact:
           topic_urn: "{{ result_create_topic.stdout.strip() }}"
+
+      - debug:
+          msg: "Topic name: {{ topic_urn }}"
 
       - name: Query Topics
         script: "list_smn_topics.py"
