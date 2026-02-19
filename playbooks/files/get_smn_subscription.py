@@ -2,7 +2,6 @@
 
 import openstack
 import sys
-import json
 
 from otcextensions import sdk
 
