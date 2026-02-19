@@ -1,7 +1,7 @@
 ---
 #  Scenario to test basic SMN subscription lifecycle scenario
 
-- name: Scenario 25 - SMN subscription
+- name: Scenario 25 - SMN Subscription
   hosts: localhost
   vars:
     prefix: scenario25-
@@ -12,10 +12,6 @@
     - set_fact:
         test_smn_topic: "{{ (prefix + 'topic') }}"
     
-    - debug:
-        msg: "Topic name: {{ test_smn_topic }}"
-
-    
     - name: Create SMN Topic
       script: "create_smn_topic.py {{ test_smn_topic }}"
       args:
@@ -25,10 +21,10 @@
     - name: Get topic_urn
       set_fact:
         topic_urn: "{{ result_create_topic.stdout.strip() }}"
-      
+
       
     - block:
-      
+
 
       - name: Create Subscription
         script: "create_smn_subscription.py {{ topic_urn }}"
@@ -36,35 +32,27 @@
           executable: python3
         register: result_create_subscription
         
-      - name: Print Create Subscription Result
-        debug:
-          var: result_create_subscription.stdout
-
       - set_fact:
           topic_subscription: "{{ result_create_subscription.stdout.strip() }}"
 
+      - debug:
+          msg: "topic_subscription: {{ topic_subscription }}"
+      
       - name: Query Subscriptions
         script: "list_smn_subscriptions.py"
         args:
           executable: python3
         register: result_list_subscriptions
         
-      - name: Print List of Subscriptions
-        debug:
-          var: result_list_subscriptions.stdout
-
       - name: Query Subscriptions of Specified Topic
         script: "get_smn_subscription.py {{ topic_urn }}"
         args:
           executable: python3
         register: result_get_subscription
         
-      - name: Print Topic Subscriptions
-        debug:
-          var: result_get_subscription.stdout
-      
       
       always:
+        
         
           - name: Delete SMN Subscription
             script: "delete_smn_subscription.py {{ topic_subscription }}"

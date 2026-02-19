@@ -10,12 +10,4 @@ conn = openstack.connect()
 
 sdk.register_otc_extensions(conn)
 
-#list(conn.smn.topics())
-
-#print(list)
-
-list_subscriptions = list(conn.smn.subscriptions())
-
-output = [sub.to_dict() for sub in list_subscriptions]
-
-print(json.dumps(output))
+conn.smn.subscriptions()
