@@ -26,7 +26,7 @@
           topic_urn: "{{ result_create_topic.stdout.strip() }}"
 
       - debug:
-          msg: "Topic name: {{ topic_urn }}"
+          msg: "topic_urn: {{ topic_urn }}"
 
       - name: Query Topics
         script: "list_smn_topics.py"
