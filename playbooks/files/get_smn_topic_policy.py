@@ -11,6 +11,5 @@ sdk.register_otc_extensions(conn)
 
 topic_urn = sys.argv[1]
 
-result = conn.smn.get_topic(topic_urn)
+conn.smn.topic_attributes(topic_urn)
 
-print(result)
