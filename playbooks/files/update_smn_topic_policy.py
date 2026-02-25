@@ -32,4 +32,4 @@ attrs = {
     "value": policy
 }
 
-conn.smn.topic_attributes(topic_urn, name="access_policy", **attrs)
+conn.smn.update_topic_attribute(topic_urn, name="access_policy", **attrs)
