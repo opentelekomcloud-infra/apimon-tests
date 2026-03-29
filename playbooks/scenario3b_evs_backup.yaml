@@ -24,7 +24,7 @@
             state: present
             #availability_zone: eu-de-01
             size: 10
-            display_name: "{{ volume_name }}"
+            name: "{{ volume_name }}"
 
         - name: List Snapshots
           openstack.cloud.volume_snapshot_info:
@@ -33,21 +33,27 @@
         - name: Create snapshot
           openstack.cloud.volume_snapshot:
             state: present
-            display_name: "{{ snapshot_name }}"
+            name: "{{ snapshot_name }}"
             volume: "{{ volume_name }}"
             timeout: 1800
           register: snapshot
           tags: ["metric=create_volume_snapshot"]
-
-        - name: Get info about snapshot
-          debug:
-            var: snapshot
 
         - name: Re-fetch info about snapshot
           openstack.cloud.volume_snapshot_info:
             name: "{{ snapshot_name }}"
           register: snapshot_info
           tags: 'service=block_storage'
+
+        - name: Wait for snapshot to become available
+          openstack.cloud.volume_snapshot_info:
+            name: "{{ snapshot_name }}"
+          register: refreshed
+          until: refreshed.volume_snapshots | default([]) | length > 0
+                 and refreshed.volume_snapshots[0].status == "available"
+          retries: 30
+          delay: 10
+          changed_when: false
 
         - assert:
             that:
@@ -60,22 +66,57 @@
         - name: Create backup
           openstack.cloud.volume_backup:
             state: "present"
-            display_name: "{{ backup_name }}"
+            name: "{{ backup_name }}"
             volume: "{{ volume_name }}"
             snapshot: "{{ snapshot_name }}"
             timeout: 1800
+          register: created_backup
           tags:
             - "service=block_storage"
             - "metric=create_volume_backup"
             - "az=default"
 
+        - name: Wait for backup to become available
+          openstack.cloud.volume_backup_info:
+            name: "{{ backup_name }}"
+          register: binfo
+          until: binfo.volume_backups | default([]) | length > 0
+                 and binfo.volume_backups[0].status == "available"
+          retries: 60
+          delay: 10
+          changed_when: false
+          tags:
+            - "service=block_storage"
+            - "metric=volume_backup_duration"  
+
+        - name: Wait for 60 seconds before continuation
+          pause:
+            seconds: 60
+
         - name: Restore backup
-          script: "restore_backup.py {{ backup_name }} {{ volume_name }} {{ (volume_name + 'new') }}"
+          script: "restore_vbs.py {{ backup_name }}"
           args:
             executable: python3
+          register: restored_backup
           tags:
             - "service=block_storage"
             - "metric=restore_volume_backup"
+
+        - set_fact:
+            job_id: "{{ restored_backup.stdout_lines | regex_search('job_id = ([A-Za-z0-9-]+)', '\\1') | first }}"        
+
+        - name: Wait until job status is SUCCESS
+          script: "query_vbs_job_id.py {{ job_id }}"
+          args:
+            executable: python3
+          register: job_status_raw
+          until: (job_status_raw.stdout_lines[0] | regex_replace('.*status:\\s*(\\w+).*', '\\1')) == "SUCCESS"
+          retries: 120          # 10 minutes total
+          delay: 5              # 5 seconds between checks
+          changed_when: false
+          tags:
+            - "service=block_storage"
+            - "metric=volume_restore_duration"  
 
         - name: Modify snapshot
           script: "modify_snapshot.py {{ snapshot_name }} {{ (snapshot_name + '_new') }}"
