@@ -1,0 +1,13 @@
+---
+
+- name: Scenario 38 - CSS Cluster Info
+  hosts: localhost
+  tasks:
+
+    - name: Get CSS cluster info
+      opentelekomcloud.cloud.css_cluster_info:
+      register: css
+
+    - name: debug css
+      debug:
+        var: css.css_clusters
