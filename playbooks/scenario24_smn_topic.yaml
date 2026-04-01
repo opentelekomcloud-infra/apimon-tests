@@ -43,10 +43,12 @@
         args:
           executable: python3
  
-      - name: Update Topic Policy
-        script: "update_smn_topic_policy.py {{ topic_urn }}"
-        args:
-          executable: python3
+      # Temporary commented out due to crashes with libraries on env. It will be reactivated once this is fixed
+      
+      # - name: Update Topic Policy
+      #   script: "update_smn_topic_policy.py {{ topic_urn }}"
+      #   args:
+      #     executable: python3
 
       - name: Query Topic Policy
         script: "get_smn_topic_policy.py {{ topic_urn }}"
