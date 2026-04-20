@@ -1,0 +1,86 @@
+---
+- name: Scenario 48a - DWS cluster functionality
+  hosts: localhost
+  vars:
+    prefix: scenario48a-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) ) }}"
+
+    - set_fact:
+        test_router_name: "{{ ('vpc_'+ prefix + '-router')}}"
+        test_subnet_name: "{{ ('vpc_'+ prefix + '-subnet')}}"
+        test_network_name: "{{ ('vpc_'+ prefix + '-network')}}"        
+        test_security_group_name: "{{ (prefix + '-sg') }}"
+        test_cluster_name: "{{ ('dws-' + prefix + '-cluster') }}"
+        test_dws_flavor: "dws.m3.xlarge"
+        username: "dbadmin"
+        password: "{{ ('Test!' + prefix)[:20] }}"
+
+    - block:
+
+      - name: Create VPC (Router + Net + Subnet)
+        include_role:
+          name: opentelekomcloud.vpc
+        vars:
+          router_name: "{{ test_router_name }}"
+          network_name: "{{ test_network_name }}"
+          subnet_name: "{{ test_subnet_name }}"
+          state: present
+
+      - name: Create security group
+        opentelekomcloud.cloud.security_group:
+          state: present
+          name: '{{ security_group_name }}'
+          description: security group for apimon DWS testing
+
+      - name: Create dws cluster
+        opentelekomcloud.cloud.dws_cluster:
+          name: "{{ test_cluster_name }}"
+          state: present
+          num_nodes: 3
+          router: "{{ test_router_name }}"
+          network: "{{ test_network_name }}"
+          security_group: "{{ security_group_name }}"
+          flavor: "{{ test_dws_flavor }}"
+          port: 8000
+          username: "{{ username }}"
+          password: "{{ password }}"
+          timeout: 1500
+          tags:
+          - 'key': "apimon-test"
+            'value': "{{ (prefix + '-dws') }}"
+
+      - name: Get DWS cluster info
+        opentelekomcloud.cloud.dws_cluster_info:
+          name: "{{ test_cluster_name }}"
+        register: dws
+
+      - name: debug dws
+        debug:
+          var: dws.dws_clusters
+
+      - name: Delete DWS Cluster
+        opentelekomcloud.cloud.dws_cluster:
+          name: "{{ test_cluster_name }}"
+          state: "absent"
+
+      always:
+        - block:
+          # Delete VPC and SUBNET
+          - name: Delete VPC
+            include_role:
+              name: opentelekomcloud.vpc
+            vars:
+              router_name: "{{ test_router_name }}"
+              network_name: "{{ test_network_name }}"
+              subnet_name: "{{ test_subnet_name }}"
+              state: absent
+
+          # Delete Security Group
+          - name: Delete SecurityGroup
+            openstack.cloud.security_group:
+              state: "absent"
+              name: "{{ test_security_group_name }}"
+
+          ignore_errors: true
