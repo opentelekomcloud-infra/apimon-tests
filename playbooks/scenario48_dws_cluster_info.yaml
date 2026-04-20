@@ -1,0 +1,13 @@
+---
+
+- name: Scenario 48 - DWS Cluster Info
+  hosts: localhost
+  tasks:
+
+    - name: Get DWS cluster info
+      opentelekomcloud.cloud.dws_cluster_info:
+      register: dws
+
+    - name: debug dws
+      debug:
+        var: dws.dws_clusters

@@ -1,0 +1,13 @@
+---
+
+- name: Scenario 48a - DWS Snapshot Info
+  hosts: localhost
+  tasks:
+
+    - name: Get DWS Snapshot info
+      opentelekomcloud.cloud.dws_snapshot_info:
+      register: dws
+
+    - name: debug dws
+      debug:
+        var: dws.dws_snapshots
