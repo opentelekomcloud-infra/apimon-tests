@@ -38,6 +38,7 @@
     openstack.cloud.volume:
       state: present
       availability_zone: "{{ availability_zone | default(omit) }}"
+      volume_type: "{{ volume_type }}"
       size: 10
       display_name: "{{ volume_name }}"
     tags:
