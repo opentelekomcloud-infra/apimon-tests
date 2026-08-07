@@ -1,0 +1,18 @@
+---
+
+- name: Scenario 49 - MRS Cluster Info
+  hosts: localhost
+  tasks:
+
+    - name: Get MRS cluster info
+      opentelekomcloud.cloud.mrs_cluster_info:
+        limit: 2
+        status: running
+        tags:
+          - key1=value1
+      register: mrs
+
+    - name: debug mrs
+      debug:
+        var: mrs.mrs_clusters
+
