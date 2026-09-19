@@ -1,0 +1,51 @@
+---
+
+# Scenario 43: Create, List, Update, Delete DCS Instance
+#
+- name: Scenario 48 - FunctionGraph
+  hosts: localhost
+  vars:
+    prefix: scenario48-
+  tasks:
+    - set_fact:
+        prefix: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) )[0:24] }}"
+        prefix2: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) )[0:24] }}"
+        prefix3: "{{ (prefix + ( lookup('env', 'TASK_EXECUTOR_JOB_ID') | default(99999999 | random | to_uuid | hash('md5'), true) ) )[0:24] }}"
+
+    - set_fact:
+        fg_inst_name: "{{ (prefix + '-fg_instance_apimon') }}"
+        fg_inst_name2: "{{ (prefix2 + '-fg_instance_apimon') }}"
+        fg_inst_name3: "{{ (prefix3 + '-fg_instance_apimon') }}"
+
+
+    - block:
+      - name: Create FG Instance
+        script: "create_fg_instance.py {{ fg_inst_name }}"
+        args:
+          executable: python3
+
+      - name: Create an another FG Instance with a new alias, and update description
+        script: "update_fg_instance.py {{ fg_inst_name2 }}"
+        args:
+          executable: python3
+
+      - name: Create an another FG Instance with trigger
+        script: "create_fg_trigger.py {{ fg_inst_name3 }}"
+        args:
+          executable: python3
+
+
+      always:
+        - block:
+            - name: Delete FG Instance
+              script: "delete_fg_instance.py {{ fg_inst_name }}"
+              args:
+                executable: python3
+
+            - name: Delete the another FG Instance
+              script: "delete_fg_instance.py {{ fg_inst_name2 }}"
+              args:
+                executable: python3
+
+
+          ignore_errors: true
