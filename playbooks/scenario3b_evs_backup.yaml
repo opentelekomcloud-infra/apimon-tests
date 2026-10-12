@@ -25,19 +25,45 @@
             #availability_zone: eu-de-01
             size: 10
             name: "{{ volume_name }}"
+          register: volume
+
+        - set_fact:
+            volume_id: "{{ volume.volume.id }}"
 
         - name: List Snapshots
           openstack.cloud.volume_snapshot_info:
           tags: 'service=block_storage'
 
-        - name: Create snapshot
-          openstack.cloud.volume_snapshot:
-            state: present
-            name: "{{ snapshot_name }}"
-            volume: "{{ volume_name }}"
-            timeout: 1800
-          register: snapshot
-          tags: ["metric=create_volume_snapshot"]
+        - name: Create VBS backup native API
+          script: "create_vbs.py {{ volume_id }} {{ backup_name }}"
+          args:
+            executable: python3
+          register: created_backup
+          
+        - set_fact:
+            job_id: "{{ created_backup.stdout_lines | regex_search('job_id = ([A-Za-z0-9-]+)', '\\1') | first }}"
+            
+        - name: Wait until create VBS backup job status is SUCCESS
+          script: "query_vbs_job_id.py {{ job_id }}"
+          args:
+            executable: python3
+          register: job_status_raw
+          until: (job_status_raw.stdout_lines[0] | regex_replace('.*status:\\s*(\\w+).*', '\\1')) == "SUCCESS"
+          retries: 120          # 10 minutes total
+          delay: 5              # 5 seconds between checks
+          changed_when: false
+          tags:
+            - "service=block_storage"
+            - "metric=volume_backup_creation"   
+            
+        - name: Get info about backup
+          openstack.cloud.volume_backup_info:
+            name: "{{ backup_name }}"
+          register: backup_info
+          tags: 'service=block_storage'
+          
+        - set_fact:
+           snapshot_id: "{{ backup_info.volume_backups[0].snapshot_id }}"
 
         - name: Re-fetch info about snapshot
           openstack.cloud.volume_snapshot_info:
@@ -45,53 +71,9 @@
           register: snapshot_info
           tags: 'service=block_storage'
 
-        - name: Wait for snapshot to become available
-          openstack.cloud.volume_snapshot_info:
-            name: "{{ snapshot_name }}"
-          register: refreshed
-          until: refreshed.volume_snapshots | default([]) | length > 0
-                 and refreshed.volume_snapshots[0].status == "available"
-          retries: 30
-          delay: 10
-          changed_when: false
-
-        - assert:
-            that:
-              - snapshot_info.volume_snapshots[0].status == 'available'
-
         - name: List Backups
           openstack.cloud.volume_backup_info:
           tags: 'service=block_storage'
-
-        - name: Create backup
-          openstack.cloud.volume_backup:
-            state: "present"
-            name: "{{ backup_name }}"
-            volume: "{{ volume_name }}"
-            snapshot: "{{ snapshot_name }}"
-            timeout: 1800
-          register: created_backup
-          tags:
-            - "service=block_storage"
-            - "metric=create_volume_backup"
-            - "az=default"
-
-        - name: Wait for backup to become available
-          openstack.cloud.volume_backup_info:
-            name: "{{ backup_name }}"
-          register: binfo
-          until: binfo.volume_backups | default([]) | length > 0
-                 and binfo.volume_backups[0].status == "available"
-          retries: 60
-          delay: 10
-          changed_when: false
-          tags:
-            - "service=block_storage"
-            - "metric=volume_backup_duration"  
-
-        - name: Wait for 60 seconds before continuation
-          pause:
-            seconds: 60
 
         - name: Restore backup
           script: "restore_vbs.py {{ backup_name }}"
@@ -105,7 +87,7 @@
         - set_fact:
             job_id: "{{ restored_backup.stdout_lines | regex_search('job_id = ([A-Za-z0-9-]+)', '\\1') | first }}"        
 
-        - name: Wait until job status is SUCCESS
+        - name: Wait until VBS restore job status is SUCCESS
           script: "query_vbs_job_id.py {{ job_id }}"
           args:
             executable: python3
@@ -119,7 +101,7 @@
             - "metric=volume_restore_duration"  
 
         - name: Modify snapshot
-          script: "modify_snapshot.py {{ snapshot_name }} {{ (snapshot_name + '_new') }}"
+          script: "modify_snapshot.py {{ snapshot_id }} {{ (snapshot_name + '_new') }}"
           args:
             executable: python3
           tags: 'service=block_storage'
